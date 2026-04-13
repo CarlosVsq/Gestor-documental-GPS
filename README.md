@@ -1,10 +1,10 @@
 # SGD - Sistema de Gestión Documental
 
-## 🎯 Proyecto
+## Proyecto
 
 Sistema de gestión documental desarrollado como "Hola Mundo" para la asignatura **Gestión de Proyectos de Software** — Universidad del Bío-Bío, 2026.
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnológico
 
 | Capa | Tecnología | Versión |
 |------|------------|---------|
@@ -46,20 +46,20 @@ npm run dev
 
 > **Nota:** Necesitas PostgreSQL corriendo en `localhost:5432` con la base de datos `sgd_db`.
 
-## 🧪 Tests
+## Tests
 
 ```bash
 cd backend
 npm run test
 ```
 
-## 📋 Historia de Usuario Implementada
+## Historia de Usuario Implementada
 
 **HU-01: CRUD de Contratistas**
 
 > Como **administrador**, quiero crear, leer, actualizar y eliminar **Contratistas** para mantener un registro actualizado de las empresas que gestionan documentos.
 
-## 👥 Equipo
+## Equipo
 
 - Diego Alamos Vallejos
 - Marcelo Cid Cisternas
