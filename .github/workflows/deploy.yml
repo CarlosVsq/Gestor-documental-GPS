@@ -18,25 +18,29 @@ on:
 
 jobs:
   deploy:
-    name: 🚀 Deploy al Servidor
+    name: Deploy al Servidor
     runs-on: self-hosted
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: 📥 Checkout código
+      - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: 🐳 Levantar servicios con Docker Compose
+      - name: Copiar variables de entorno
+        run: |
+          cp ~/sgd-config/.env .env
+
+      - name: Levantar servicios con Docker Compose
         run: |
           docker compose -f docker-compose.yml up -d --build
 
-      - name: 🧹 Limpiar imágenes sin usar
+      - name: Limpiar imágenes sin usar
         run: |
           docker image prune -f
 
-      - name: ✅ Resumen del Deploy
+      - name: Resumen del Deploy
         run: |
-          echo "## 🚀 Deploy completado" >> $GITHUB_STEP_SUMMARY
+          echo "## Deploy completado" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Servicio | Estado |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
