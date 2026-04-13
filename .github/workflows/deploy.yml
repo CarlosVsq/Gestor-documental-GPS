@@ -32,7 +32,7 @@ jobs:
 
       - name: Levantar servicios con Docker Compose
         run: |
-          docker compose -f docker-compose.yml up -d --build
+          docker-compose -f docker-compose.yml up -d --build
 
       - name: Limpiar imágenes sin usar
         run: |
@@ -44,4 +44,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Servicio | Estado |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          docker compose ps --format "| {{.Name}} | {{.Status}} |" >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "| - | Ver logs del runner |" >> $GITHUB_STEP_SUMMARY
+          docker-compose ps --format "| {{.Name}} | {{.Status}} |" >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "| - | Ver logs del runner |" >> $GITHUB_STEP_SUMMARY
