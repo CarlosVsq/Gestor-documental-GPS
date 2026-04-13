@@ -1,0 +1,89 @@
+# ============================================================
+# SGD - Sistema de Gestión Documental
+# Docker Compose - Orquestación de Servicios
+# ============================================================
+# Levanta todo el stack con: docker-compose up --build
+# ============================================================
+
+version: '3.8'
+
+services:
+  # --- Base de Datos PostgreSQL ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: sgd-postgres
+    environment:
+      POSTGRES_USER: sgd_user
+      POSTGRES_PASSWORD: sgd_password
+      POSTGRES_DB: sgd_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgd_user -d sgd_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sgd-network
+
+  # --- Cache Redis ---
+  redis:
+    image: redis:7-alpine
+    container_name: sgd-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - sgd-network
+
+  # --- Backend NestJS ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sgd-backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: sgd_user
+      DB_PASSWORD: sgd_password
+      DB_DATABASE: sgd_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sgd-network
+
+  # --- Frontend React ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sgd-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - sgd-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  sgd-network:
+    driver: bridge
