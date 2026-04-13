@@ -1,13 +1,12 @@
 # ============================================================
-# SGD - Pipeline CI/CD
+# SGD - Pipeline de Integración Continua
 # GitHub Actions Workflow
 # ============================================================
 # Se ejecuta en cada push y pull request a main:
-#   Job 1: Test → ejecuta Jest con cobertura
-#   Job 2: Build → construye imágenes Docker y sube a GHCR
+#   Job: Test → instala dependencias, ejecuta Jest con cobertura
 # ============================================================
 
-name: SGD CI/CD Pipeline
+name: SGD CI - Tests
 
 on:
   push:
@@ -15,12 +14,7 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository }}
-
 jobs:
-  # ── Job 1: Test ──────────────────────────
   test:
     name: 🧪 Lint & Test
     runs-on: ubuntu-latest
@@ -48,52 +42,3 @@ jobs:
         with:
           name: coverage-report
           path: backend/coverage/
-
-  # ── Job 2: Build Docker ──────────────────
-  build:
-    name: 🐳 Build Docker Images
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: 📥 Checkout código
-        uses: actions/checkout@v4
-
-      - name: 🔐 Login en GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🏗️ Build & Push Backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }}
-
-      - name: 🏗️ Build & Push Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}
-
-      - name: ✅ Resumen del Build
-        run: |
-          echo "## 🐳 Imágenes Docker publicadas" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Imagen | Tag |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend | \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend | \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
