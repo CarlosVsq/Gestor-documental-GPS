@@ -42,8 +42,19 @@ export default function ContratistaForm({ onSubmit, initialData, isEditing, onCa
     }
   };
 
+  // Auto-formatear RUT (agrega puntos y guión)
+  const formatRut = (value: string) => {
+    const clean = value.replace(/[^0-9kK]/g, '');
+    if (clean.length < 2) return clean;
+    const dv = clean.slice(-1);
+    let numbers = clean.slice(0, -1);
+    numbers = numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `${numbers}-${dv}`;
+  };
+
   const handleChange = (field: keyof CreateContratistaDto, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const finalValue = field === 'rut' ? formatRut(value) : value;
+    setFormData(prev => ({ ...prev, [field]: finalValue }));
     if (errors[field]) setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
   };
 

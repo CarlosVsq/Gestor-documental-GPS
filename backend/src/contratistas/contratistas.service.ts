@@ -24,6 +24,7 @@ export class ContratistasService {
     // Verificar que el RUT no exista
     const existente = await this.contratistaRepository.findOne({
       where: { rut: createDto.rut },
+      withDeleted: true,
     });
     if (existente) {
       throw new ConflictException(`Ya existe un contratista con RUT ${createDto.rut}`);
@@ -72,6 +73,7 @@ export class ContratistasService {
     if (updateDto.rut && updateDto.rut !== contratista.rut) {
       const existente = await this.contratistaRepository.findOne({
         where: { rut: updateDto.rut },
+        withDeleted: true,
       });
       if (existente) {
         throw new ConflictException(`Ya existe un contratista con RUT ${updateDto.rut}`);
