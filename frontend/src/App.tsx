@@ -111,7 +111,7 @@ function App() {
       {/* Page Header */}
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Contratistas</h1>
+          <h1>Contratistas Cambios Demo</h1>
           <p className="page-description">Gestiona los usuarios registrados en el sistema</p>
         </div>
         <button className="btn btn-primary" onClick={handleNewContratista}>
