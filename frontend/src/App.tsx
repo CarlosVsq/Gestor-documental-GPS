@@ -27,6 +27,15 @@ const getRoleLabel = (rol: string) => {
 // ============================================================
 // Layout principal con Sidebar
 // ============================================================
+const getPageHeaderInfo = (page: ActivePage) => {
+  switch (page) {
+    case 'dashboard': return { title: 'Dashboard', desc: 'Vista general del Sistema de Gestión Documental' };
+    case 'contratistas': return { title: 'Contratistas', desc: 'Gestiona los contratistas registrados en el sistema' };
+    case 'usuarios': return { title: 'Usuarios', desc: 'Gestiona los usuarios con acceso al sistema' };
+    default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
+  }
+};
+
 function AppLayout() {
   const { user, logout } = useAuth();
   const [activePage, setActivePage] = useState<ActivePage>('dashboard');
@@ -113,11 +122,7 @@ function AppLayout() {
       case 'contratistas':
         return (
           <div className="page-content">
-            <div className="page-header">
-              <div className="page-header-left">
-                <h1>Contratistas</h1>
-                <p className="page-description">Gestiona los contratistas registrados en el sistema</p>
-              </div>
+            <div style={{ marginBottom: '20px' }}>
               <button className="btn btn-primary" onClick={() => { setEditingContratista(null); setShowForm(true); }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                 Nuevo Contratista
@@ -150,12 +155,7 @@ function AppLayout() {
       default:
         return (
           <div className="page-content">
-            <div className="page-header">
-              <div className="page-header-left">
-                <h1>{activePage.charAt(0).toUpperCase() + activePage.slice(1)}</h1>
-                <p className="page-description">Esta sección estará disponible próximamente</p>
-              </div>
-            </div>
+
             <div className="empty-state">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
               <h3>Próximamente</h3>
@@ -196,9 +196,10 @@ function AppLayout() {
         {/* Topbar */}
         <div className="topbar">
           <div className="topbar-left">
-            <button className="sidebar-toggle-btn" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} title="Toggle sidebar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-            </button>
+            <div className="page-header-left">
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--gray-900)', margin: 0, lineHeight: 1.2 }}>{getPageHeaderInfo(activePage).title}</h1>
+              <p className="page-description" style={{ margin: 0, marginTop: '2px' }}>{getPageHeaderInfo(activePage).desc}</p>
+            </div>
           </div>
           <div className="topbar-right">
             <div className="user-menu-container">

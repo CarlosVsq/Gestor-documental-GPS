@@ -10,12 +10,6 @@ interface DashboardProps {
 export default function Dashboard({ stats, totalContratistas, onNavigate }: DashboardProps) {
   return (
     <div className="page-content">
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1>Dashboard</h1>
-          <p className="page-description">Vista general del Sistema de Gestión Documental</p>
-        </div>
-      </div>
 
       {/* KPI Cards */}
       <div className="kpi-grid">
