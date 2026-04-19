@@ -98,63 +98,6 @@ export default function Dashboard({ stats, totalContratistas, onNavigate }: Dash
           </div>
         </div>
 
-        {/* Pipeline Status */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>Pipeline CI/CD</h3>
-            <span className="badge badge-success-light">Operativo</span>
-          </div>
-          <div className="pipeline-list">
-            {[
-              { label: 'GitHub Issue (HU-01)', status: 'done' },
-              { label: 'Branch feature/hu-01', status: 'done' },
-              { label: 'Jest Tests (7/7)', status: 'done' },
-              { label: 'Pull Request → main', status: 'done' },
-              { label: 'GitHub Actions CI', status: 'done' },
-              { label: 'Docker Build & Push', status: 'active' },
-              { label: 'Deploy Servidor UBB', status: 'pending' },
-            ].map((step, i) => (
-              <div key={i} className={`pipeline-item pipeline-${step.status}`}>
-                <div className="pipeline-dot" />
-                <span className="pipeline-label">{step.label}</span>
-                <span className={`pipeline-badge-${step.status}`}>
-                  {step.status === 'done' ? '✓' : step.status === 'active' ? '⏳' : '—'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tech Stack */}
-        <div className="dashboard-card full-width">
-          <div className="card-header">
-            <h3>Stack Tecnológico</h3>
-            <span className="badge badge-info-light">8 tecnologías</span>
-          </div>
-          <div className="tech-stack-grid">
-            {[
-              { name: 'React', desc: 'Frontend UI', color: '#61dafb', icon: '⚛️' },
-              { name: 'NestJS', desc: 'Backend API', color: '#e0234e', icon: '🏗️' },
-              { name: 'PostgreSQL', desc: 'Base de Datos', color: '#336791', icon: '🐘' },
-              { name: 'Redis', desc: 'Caché', color: '#dc382d', icon: '🔴' },
-              { name: 'TypeORM', desc: 'ORM', color: '#f37626', icon: '🔗' },
-              { name: 'Docker', desc: 'Contenedores', color: '#2496ed', icon: '🐳' },
-              { name: 'GitHub Actions', desc: 'CI/CD', color: '#2088ff', icon: '🔄' },
-              { name: 'Swagger', desc: 'API Docs', color: '#85ea2d', icon: '📖' },
-            ].map((tech) => (
-              <div key={tech.name} className="tech-item">
-                <span className="tech-icon">{tech.icon}</span>
-                <div className="tech-info">
-                  <span className="tech-name">{tech.name}</span>
-                  <span className="tech-desc">{tech.desc}</span>
-                </div>
-                <div className="tech-bar" style={{ backgroundColor: tech.color + '30' }}>
-                  <div className="tech-bar-fill" style={{ backgroundColor: tech.color, width: '100%' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

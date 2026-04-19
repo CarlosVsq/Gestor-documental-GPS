@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ContratistasModule } from './contratistas/contratistas.module';
+import { AuthModule } from './auth/auth.module';
 
 // Detectar si estamos en Docker (con PostgreSQL) o en desarrollo local (SQLite)
 const isProduction = !!process.env.DB_HOST;
@@ -36,6 +37,7 @@ const isProduction = !!process.env.DB_HOST;
     }),
 
     // Módulos del sistema
+    AuthModule,
     ContratistasModule,
   ],
 })

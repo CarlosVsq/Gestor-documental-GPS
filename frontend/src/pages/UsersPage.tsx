@@ -1,0 +1,244 @@
+import { useState, useEffect, useCallback } from 'react';
+import { usersApi } from '../api/users';
+import type { UserRecord, CreateUserDto, UpdateUserDto } from '../api/users';
+
+/**
+ * UsersPage — HU-19
+ * CRUD de usuarios. Reutiliza los mismos componentes CSS de
+ * ContratistasTable (table-card, table-toolbar, table-search, etc.)
+ * y ContratistaForm (modal-form, form-fields, field-group, etc.)
+ */
+
+interface UserFormData {
+  nombre: string;
+  email: string;
+  password: string;
+  rol: string;
+}
+
+const EMPTY_FORM: UserFormData = { nombre: '', email: '', password: '', rol: 'admin' };
+
+const ROLE_OPTIONS = [
+  { value: 'admin', label: 'Administrador' },
+];
+
+const getRoleLabel = (rol: string) => {
+  const map: Record<string, string> = { admin: 'Administrador', supervisor: 'Supervisor', colaborador: 'Colaborador', lectura: 'Solo Lectura' };
+  return map[rol] || rol;
+};
+
+interface UsersPageProps {
+  onNotify: (message: string, type: 'success' | 'error') => void;
+}
+
+export default function UsersPage({ onNotify }: UsersPageProps) {
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<UserRecord | null>(null);
+  const [form, setForm] = useState<UserFormData>(EMPTY_FORM);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await usersApi.getAll();
+      setUsers(data);
+    } catch {
+      onNotify('Error al cargar usuarios', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [onNotify]);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
+
+  const filtered = users.filter(u =>
+    u.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleOpenCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
+  const handleOpenEdit = (user: UserRecord) => { setEditing(user); setForm({ nombre: user.nombre, email: user.email, password: '', rol: user.rol }); setShowForm(true); };
+  const handleClose = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editing) {
+        const dto: UpdateUserDto = { nombre: form.nombre, email: form.email, rol: form.rol };
+        if (form.password) dto.password = form.password;
+        await usersApi.update(editing.id, dto);
+        onNotify('Usuario actualizado exitosamente', 'success');
+      } else {
+        const dto: CreateUserDto = { nombre: form.nombre, email: form.email, password: form.password, rol: form.rol };
+        await usersApi.create(dto);
+        onNotify('Usuario creado exitosamente', 'success');
+      }
+      handleClose();
+      loadUsers();
+    } catch (err: any) {
+      onNotify(err.message || 'Error al guardar', 'error');
+    }
+  };
+
+  const handleToggle = async (user: UserRecord) => {
+    try {
+      await usersApi.toggleActive(user.id);
+      onNotify(`Usuario ${user.activo ? 'desactivado' : 'activado'}`, 'success');
+      loadUsers();
+    } catch {
+      onNotify('Error al cambiar estado', 'error');
+    }
+  };
+
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  return (
+    <div className="page-content">
+      {/* Page Header — reutiliza .page-header */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1>Usuarios</h1>
+          <p className="page-description">Gestiona los usuarios con acceso al sistema</p>
+        </div>
+        <button className="btn btn-primary" onClick={handleOpenCreate}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          Nuevo Usuario
+        </button>
+      </div>
+
+      {/* Stats — reutiliza .mini-stats-bar */}
+      <div className="mini-stats-bar">
+        <div className="mini-stat"><span className="mini-stat-value">{users.length}</span><span className="mini-stat-label">Total</span></div>
+        <div className="mini-stat"><span className="mini-stat-value active-val">{users.filter(u => u.activo).length}</span><span className="mini-stat-label">Activos</span></div>
+        <div className="mini-stat"><span className="mini-stat-value inactive-val">{users.filter(u => !u.activo).length}</span><span className="mini-stat-label">Inactivos</span></div>
+      </div>
+
+      {/* Table — reutiliza .table-card exacto de ContratistasTable */}
+      <div className="table-card">
+        <div className="table-toolbar">
+          <div className="table-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <input type="text" placeholder="Buscar usuario..." className="search-input" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="table-filters">
+            <span className="results-count">{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="loading-state"><div className="spinner" /><p>Cargando usuarios...</p></div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            <h3>No hay usuarios registrados</h3>
+            <p>Haz clic en "Nuevo Usuario" para crear el primer usuario</p>
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Registrado</th>
+                  <th style={{width: '100px'}}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(user => (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="cell-person">
+                        <div className="person-avatar" style={{ backgroundColor: `hsl(${(user.id * 67) % 360}, 60%, 65%)` }}>
+                          {user.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="person-info">
+                          <span className="person-name">{user.nombre}</span>
+                          <span className="cell-muted" style={{ fontSize: '0.8rem' }}>{user.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span className="badge badge-info-light">{getRoleLabel(user.rol)}</span></td>
+                    <td>
+                      <span className={`status-badge ${user.activo ? 'status-active' : 'status-inactive'}`}>
+                        <span className="status-dot" />
+                        {user.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="cell-muted cell-date">{formatDate(user.creadoEn)}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="action-btn action-edit" title="Editar" onClick={() => handleOpenEdit(user)}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                        </button>
+                        <button
+                          className={`action-btn ${user.activo ? 'action-delete' : 'action-edit'}`}
+                          title={user.activo ? 'Desactivar' : 'Activar'}
+                          onClick={() => handleToggle(user)}
+                        >
+                          {user.activo ? (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                          ) : (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Form Modal — reutiliza las mismas clases de ContratistaForm:
+          .modal-overlay, .modal-content, .modal-form, .modal-form-header,
+          .form-fields, .field-group, .modal-form-actions */}
+      {showForm && (
+        <div className="modal-overlay" onClick={handleClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <form className="modal-form" onSubmit={handleSubmit}>
+              <div className="modal-form-header">
+                <h2>{editing ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
+                <p>{editing ? 'Modifica los datos del usuario seleccionado' : 'Completa los datos para crear un nuevo usuario'}</p>
+              </div>
+
+              <div className="form-fields">
+                <div className="field-group">
+                  <label htmlFor="user-nombre">Nombre completo <span className="required">*</span></label>
+                  <input id="user-nombre" type="text" placeholder="Ej: Juan Pérez" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
+                </div>
+
+                <div className="field-group">
+                  <label htmlFor="user-email">Email <span className="required">*</span></label>
+                  <input id="user-email" type="email" placeholder="Ej: juan@sgd.cl" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+                </div>
+
+                <div className="field-group">
+                  <label htmlFor="user-password">{editing ? 'Nueva contraseña' : 'Contraseña'} {!editing && <span className="required">*</span>}{editing && <span className="optional">(dejar vacío para no cambiar)</span>}</label>
+                  <input id="user-password" type="password" placeholder={editing ? '••••••••' : 'Mínimo 6 caracteres'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required={!editing} minLength={6} />
+                </div>
+
+                <div className="field-group">
+                  <label htmlFor="user-rol">Rol</label>
+                  <select id="user-rol" value={form.rol} onChange={e => setForm({ ...form, rol: e.target.value })} className="field-select">
+                    {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-form-actions">
+                <button type="button" className="btn btn-ghost" onClick={handleClose}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">{editing ? 'Guardar Cambios' : 'Crear Usuario'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
