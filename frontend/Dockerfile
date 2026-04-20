@@ -1,9 +1,9 @@
 # Frontend Dockerfile - React + Vite
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npm run build
 
@@ -18,14 +18,14 @@ RUN echo 'server { \
   root /usr/share/nginx/html; \
   index index.html; \
   location / { \
-    try_files $uri $uri/ /index.html; \
+  try_files $uri $uri/ /index.html; \
   } \
   location /api { \
-    proxy_pass http://backend:3000; \
-    proxy_set_header Host $host; \
-    proxy_set_header X-Real-IP $remote_addr; \
+  proxy_pass http://backend:3000; \
+  proxy_set_header Host $host; \
+  proxy_set_header X-Real-IP $remote_addr; \
   } \
-}' > /etc/nginx/conf.d/default.conf
+  }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
