@@ -24,6 +24,7 @@ Sistema de gestión documental desarrollado como "Hola Mundo" para la asignatura
 
 ```bash
 docker-compose up --build
+docker compose down -v
 ```
 
 - Frontend: http://localhost
