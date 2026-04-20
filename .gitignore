@@ -33,3 +33,6 @@ npm-debug.log*
 
 # Python cache
 __pycache__/
+
+
+uploads/

@@ -7,6 +7,7 @@ import ContratistasTable from './components/ContratistasTable';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
+import DocumentosPage from './pages/DocumentosPage';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
@@ -32,6 +33,7 @@ const getPageHeaderInfo = (page: ActivePage) => {
     case 'dashboard': return { title: 'Dashboard', desc: 'Vista general del Sistema de Gestión Documental' };
     case 'contratistas': return { title: 'Contratistas', desc: 'Gestiona los contratistas registrados en el sistema' };
     case 'usuarios': return { title: 'Usuarios', desc: 'Gestiona los usuarios con acceso al sistema' };
+    case 'documentos': return { title: 'Documentos', desc: 'Sube y centraliza la documentación técnica de las obras' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
   }
 };
@@ -151,6 +153,9 @@ function AppLayout() {
 
       case 'usuarios':
         return <UsersPage onNotify={showNotification} />;
+
+      case 'documentos':
+        return <DocumentosPage onNotify={showNotification} />;
 
       default:
         return (

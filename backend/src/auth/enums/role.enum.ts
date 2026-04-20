@@ -5,8 +5,5 @@
  */
 export enum Role {
   ADMIN = 'admin',
-  // Futuros roles:
-  // SUPERVISOR = 'supervisor',
-  // COLABORADOR = 'colaborador',
-  // LECTURA = 'lectura',
+  EDITOR = 'editor',
 }
