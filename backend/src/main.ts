@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AuthService } from './auth/auth.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -33,11 +34,17 @@ async function bootstrap() {
       'Proyecto desarrollado para la asignatura Gestión de Proyectos de Software - UBB.',
     )
     .setVersion('1.0')
+    .addTag('auth', 'Autenticación y Sesión (HU-25)')
     .addTag('contratistas', 'Gestión de Contratistas (HU-01)')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+
+  // Seed: crear usuario admin por defecto si no existe
+  const authService = app.get(AuthService);
+  await authService.seedAdmin();
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
