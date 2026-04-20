@@ -160,7 +160,12 @@ function App() {
         )}
 
         {activePage === 'areas' && (
-          <AreasTable areas={areas} total={aTotal} loading={loading} onEdit={(a) => { setEditingArea(a); setShowForm(true); }} onDelete={handleDeleteA} />
+          <>
+            <div className="mini-stats-bar" style={{ marginBottom: '20px' }}>
+              <div className="mini-stat"><span className="mini-stat-value">{aTotal}</span><span className="mini-stat-label">Total Áreas</span></div>
+            </div>
+            <AreasTable areas={areas} total={aTotal} loading={loading} onEdit={(a) => { setEditingArea(a); setShowForm(true); }} onDelete={handleDeleteA} />
+          </>
         )}
 
         {showForm && activePage === 'contratistas' && (
