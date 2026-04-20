@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  OneToMany
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { Area } from '../areas/entities/area.entity';
 
 /**
  * Entidad Contratista - HU-01
@@ -61,4 +63,7 @@ export class Contratista {
   @ApiProperty({ description: 'Fecha de eliminación (soft delete)', required: false })
   @DeleteDateColumn()
   eliminadoEn: Date;
+
+  @OneToMany(() => Area, area => area.contratista)
+  areas: Area[];
 }
