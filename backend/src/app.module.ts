@@ -4,6 +4,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ContratistasModule } from './contratistas/contratistas.module';
 import { AuthModule } from './auth/auth.module';
 import { DocumentosModule } from './documentos/documentos.module';
+import { AreasModule } from './areas/areas.module';
+import { ProyectosModule } from './proyectos/proyectos.module';
 
 // Detectar si estamos en Docker (con PostgreSQL) o en desarrollo local (SQLite)
 const isProduction = !!process.env.DB_HOST;
@@ -14,21 +16,21 @@ const isProduction = !!process.env.DB_HOST;
     TypeOrmModule.forRoot(
       isProduction
         ? {
-            type: 'postgres',
-            host: process.env.DB_HOST,
-            port: parseInt(process.env.DB_PORT, 10) || 5432,
-            username: process.env.DB_USERNAME || 'sgd_user',
-            password: process.env.DB_PASSWORD || 'sgd_password',
-            database: process.env.DB_DATABASE || 'sgd_db',
-            autoLoadEntities: true,
-            synchronize: true,
-          }
+          type: 'postgres',
+          host: process.env.DB_HOST,
+          port: parseInt(process.env.DB_PORT, 10) || 5432,
+          username: process.env.DB_USERNAME || 'sgd_user',
+          password: process.env.DB_PASSWORD || 'sgd_password',
+          database: process.env.DB_DATABASE || 'sgd_db',
+          autoLoadEntities: true,
+          synchronize: true,
+        }
         : {
-            type: 'better-sqlite3',
-            database: 'sgd_dev.db',
-            autoLoadEntities: true,
-            synchronize: true,
-          },
+          type: 'better-sqlite3',
+          database: 'sgd_dev.db',
+          autoLoadEntities: true,
+          synchronize: true,
+        },
     ),
 
     // Configuración de Caché (memoria en desarrollo)
@@ -40,7 +42,10 @@ const isProduction = !!process.env.DB_HOST;
     // Módulos del sistema
     AuthModule,
     ContratistasModule,
+    AreasModule,
+    ProyectosModule,
     DocumentosModule,
+
   ],
 })
-export class AppModule {}
+export class AppModule { }

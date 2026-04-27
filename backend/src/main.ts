@@ -36,6 +36,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addTag('auth', 'Autenticación y Sesión (HU-25)')
     .addTag('contratistas', 'Gestión de Contratistas (HU-01)')
+    .addTag('areas', 'Gestión de Áreas (HU-02)')
     .addBearerAuth()
     .build();
 
