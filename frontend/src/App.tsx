@@ -4,6 +4,8 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ContratistaForm from './components/ContratistaForm';
 import ContratistasTable from './components/ContratistasTable';
+import AreasTable from './components/AreasTable';
+import AreaForm from './components/AreaForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
@@ -11,6 +13,8 @@ import DocumentosPage from './pages/DocumentosPage';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
+import { areasApi } from './api/areas';
+import type { Area, CreateAreaDto, AreaStats } from './api/areas';
 
 export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'requerimientos' | 'documentos' | 'reportes' | 'usuarios';
 
@@ -32,6 +36,7 @@ const getPageHeaderInfo = (page: ActivePage) => {
   switch (page) {
     case 'dashboard': return { title: 'Dashboard', desc: 'Vista general del Sistema de Gestión Documental' };
     case 'contratistas': return { title: 'Contratistas', desc: 'Gestiona los contratistas registrados en el sistema' };
+    case 'areas': return { title: 'Áreas', desc: 'Gestiona las áreas registradas en el sistema' };
     case 'usuarios': return { title: 'Usuarios', desc: 'Gestiona los usuarios con acceso al sistema' };
     case 'documentos': return { title: 'Documentos', desc: 'Sube y centraliza la documentación técnica de las obras' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
@@ -52,6 +57,14 @@ function AppLayout() {
   const [showForm, setShowForm] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // --- Áreas state (HU-02) ---
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [areasTotal, setAreasTotal] = useState(0);
+  const [areasStats, setAreasStats] = useState<AreaStats>({ total: 0, activas: 0, inactivas: 0 });
+  const [areasLoading, setAreasLoading] = useState(true);
+  const [editingArea, setEditingArea] = useState<Area | null>(null);
+  const [showAreaForm, setShowAreaForm] = useState(false);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -75,7 +88,24 @@ function AppLayout() {
     }
   }, [showNotification]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const loadAreasData = useCallback(async () => {
+    try {
+      setAreasLoading(true);
+      const [response, statsData] = await Promise.all([
+        areasApi.getAll(1, 50),
+        areasApi.getStats(),
+      ]);
+      setAreas(response.data);
+      setAreasTotal(response.total);
+      setAreasStats(statsData);
+    } catch {
+      showNotification('Error al cargar áreas. ¿Está el backend corriendo en :3000?', 'error');
+    } finally {
+      setAreasLoading(false);
+    }
+  }, [showNotification]);
+
+  useEffect(() => { loadData(); loadAreasData(); }, [loadData, loadAreasData]);
 
   // --- Contratistas handlers ---
   const handleCreate = async (data: CreateContratistaDto) => {
@@ -113,6 +143,42 @@ function AppLayout() {
     }
   };
 
+  // --- Áreas handlers (HU-02) ---
+  const handleCreateArea = async (data: CreateAreaDto) => {
+    try {
+      await areasApi.create(data);
+      showNotification('Área creada exitosamente', 'success');
+      setShowAreaForm(false);
+      loadAreasData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al crear área', 'error');
+    }
+  };
+
+  const handleUpdateArea = async (data: CreateAreaDto) => {
+    if (!editingArea) return;
+    try {
+      await areasApi.update(editingArea.id, data);
+      showNotification('Área actualizada exitosamente', 'success');
+      setEditingArea(null);
+      setShowAreaForm(false);
+      loadAreasData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al actualizar área', 'error');
+    }
+  };
+
+  const handleDeleteArea = async (id: number) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta área?')) return;
+    try {
+      await areasApi.delete(id);
+      showNotification('Área eliminada correctamente', 'success');
+      loadAreasData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al eliminar área', 'error');
+    }
+  };
+
   // ============================================================
   // Render page content based on activePage
   // ============================================================
@@ -144,6 +210,37 @@ function AppLayout() {
                     initialData={editingContratista ? { nombre: editingContratista.nombre, rut: editingContratista.rut, email: editingContratista.email, telefono: editingContratista.telefono } : undefined}
                     isEditing={!!editingContratista}
                     onCancel={() => { setEditingContratista(null); setShowForm(false); }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'areas':
+        return (
+          <div className="page-content">
+            <div style={{ marginBottom: '20px' }}>
+              <button className="btn btn-primary" onClick={() => { setEditingArea(null); setShowAreaForm(true); }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Nueva Área
+              </button>
+            </div>
+            <div className="mini-stats-bar">
+              <div className="mini-stat"><span className="mini-stat-value">{areasStats.total}</span><span className="mini-stat-label">Total</span></div>
+              <div className="mini-stat"><span className="mini-stat-value active-val">{areasStats.activas}</span><span className="mini-stat-label">Activas</span></div>
+              <div className="mini-stat"><span className="mini-stat-value inactive-val">{areasStats.inactivas}</span><span className="mini-stat-label">Inactivas</span></div>
+            </div>
+            <AreasTable areas={areas} total={areasTotal} onEdit={(a) => { setEditingArea(a); setShowAreaForm(true); }} onDelete={handleDeleteArea} loading={areasLoading} />
+            {showAreaForm && (
+              <div className="modal-overlay" onClick={() => { setEditingArea(null); setShowAreaForm(false); }}>
+                <div className="modal-content" onClick={e => e.stopPropagation()}>
+                  <AreaForm
+                    onSubmit={editingArea ? handleUpdateArea : handleCreateArea}
+                    initialData={editingArea ? { nombre: editingArea.nombre, descripcion: editingArea.descripcion || '', contratistaId: editingArea.contratistaId } : undefined}
+                    isEditing={!!editingArea}
+                    onCancel={() => { setEditingArea(null); setShowAreaForm(false); }}
+                    contratistas={contratistas}
                   />
                 </div>
               </div>
