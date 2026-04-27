@@ -123,8 +123,12 @@ export class AreasService {
         }
 
         Object.assign(area, updateDto);
+        if (updateDto.contratistaId !== undefined) {
+            area.contratista = { id: updateDto.contratistaId } as any;
+        }
         area.actualizadoPor = 'admin'; // En producción viene del JWT
-        return this.areaRepository.save(area);
+        await this.areaRepository.save(area);
+        return this.findOne(id);
     }
 
     /**

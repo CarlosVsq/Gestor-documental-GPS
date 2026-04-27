@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Contratista } from '../contratistas/contratista.entity';
+import { Proyecto } from '../proyectos/proyecto.entity';
 
 /**
  * Entidad Área - HU-02
@@ -45,9 +46,8 @@ export class Area {
     contratista: Contratista;
 
     // Relación inversa para verificar dependencias antes de eliminar
-    // La entidad Proyecto se define en su propio módulo
-    @OneToMany('Proyecto', 'area')
-    proyectos: any[];
+    @OneToMany(() => Proyecto, (proyecto) => proyecto.area)
+    proyectos: Proyecto[];
 
     // --- Campos de Auditoría (RF3.2) ---
 

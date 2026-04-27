@@ -6,6 +6,8 @@ import ContratistaForm from './components/ContratistaForm';
 import ContratistasTable from './components/ContratistasTable';
 import AreasTable from './components/AreasTable';
 import AreaForm from './components/AreaForm';
+import ProyectosTable from './components/ProyectosTable';
+import ProyectoForm from './components/ProyectoForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
@@ -15,6 +17,8 @@ import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
 import { areasApi } from './api/areas';
 import type { Area, CreateAreaDto, AreaStats } from './api/areas';
+import { proyectosApi } from './api/proyectos';
+import type { Proyecto, CreateProyectoDto, ProyectoStats } from './api/proyectos';
 
 export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'requerimientos' | 'documentos' | 'reportes' | 'usuarios';
 
@@ -37,6 +41,7 @@ const getPageHeaderInfo = (page: ActivePage) => {
     case 'dashboard': return { title: 'Dashboard', desc: 'Vista general del Sistema de Gestión Documental' };
     case 'contratistas': return { title: 'Contratistas', desc: 'Gestiona los contratistas registrados en el sistema' };
     case 'areas': return { title: 'Áreas', desc: 'Gestiona las áreas registradas en el sistema' };
+    case 'proyectos': return { title: 'Proyectos', desc: 'Gestiona los proyectos vinculados a áreas y contratistas' };
     case 'usuarios': return { title: 'Usuarios', desc: 'Gestiona los usuarios con acceso al sistema' };
     case 'documentos': return { title: 'Documentos', desc: 'Sube y centraliza la documentación técnica de las obras' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
@@ -65,6 +70,14 @@ function AppLayout() {
   const [areasLoading, setAreasLoading] = useState(true);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [showAreaForm, setShowAreaForm] = useState(false);
+
+  // --- Proyectos state (HU-03) ---
+  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+  const [proyectosTotal, setProyectosTotal] = useState(0);
+  const [proyectosStats, setProyectosStats] = useState<ProyectoStats>({ total: 0, activos: 0, inactivos: 0 });
+  const [proyectosLoading, setProyectosLoading] = useState(true);
+  const [editingProyecto, setEditingProyecto] = useState<Proyecto | null>(null);
+  const [showProyectoForm, setShowProyectoForm] = useState(false);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -105,7 +118,24 @@ function AppLayout() {
     }
   }, [showNotification]);
 
-  useEffect(() => { loadData(); loadAreasData(); }, [loadData, loadAreasData]);
+  const loadProyectosData = useCallback(async () => {
+    try {
+      setProyectosLoading(true);
+      const [response, statsData] = await Promise.all([
+        proyectosApi.getAll(1, 50),
+        proyectosApi.getStats(),
+      ]);
+      setProyectos(response.data);
+      setProyectosTotal(response.total);
+      setProyectosStats(statsData);
+    } catch {
+      showNotification('Error al cargar proyectos. ¿Está el backend corriendo en :3000?', 'error');
+    } finally {
+      setProyectosLoading(false);
+    }
+  }, [showNotification]);
+
+  useEffect(() => { loadData(); loadAreasData(); loadProyectosData(); }, [loadData, loadAreasData, loadProyectosData]);
 
   // --- Contratistas handlers ---
   const handleCreate = async (data: CreateContratistaDto) => {
@@ -127,6 +157,8 @@ function AppLayout() {
       setEditingContratista(null);
       setShowForm(false);
       loadData();
+      loadAreasData();
+      loadProyectosData();
     } catch (err: any) {
       showNotification(err.message || 'Error al actualizar', 'error');
     }
@@ -163,6 +195,7 @@ function AppLayout() {
       setEditingArea(null);
       setShowAreaForm(false);
       loadAreasData();
+      loadProyectosData();
     } catch (err: any) {
       showNotification(err.message || 'Error al actualizar área', 'error');
     }
@@ -176,6 +209,42 @@ function AppLayout() {
       loadAreasData();
     } catch (err: any) {
       showNotification(err.message || 'Error al eliminar área', 'error');
+    }
+  };
+
+  // --- Proyectos handlers (HU-03) ---
+  const handleCreateProyecto = async (data: CreateProyectoDto) => {
+    try {
+      await proyectosApi.create(data);
+      showNotification('Proyecto creado exitosamente', 'success');
+      setShowProyectoForm(false);
+      loadProyectosData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al crear proyecto', 'error');
+    }
+  };
+
+  const handleUpdateProyecto = async (data: CreateProyectoDto) => {
+    if (!editingProyecto) return;
+    try {
+      await proyectosApi.update(editingProyecto.id, data);
+      showNotification('Proyecto actualizado exitosamente', 'success');
+      setEditingProyecto(null);
+      setShowProyectoForm(false);
+      loadProyectosData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al actualizar proyecto', 'error');
+    }
+  };
+
+  const handleDeleteProyecto = async (id: number) => {
+    if (!window.confirm('¿Estás seguro de eliminar este proyecto?')) return;
+    try {
+      await proyectosApi.delete(id);
+      showNotification('Proyecto eliminado correctamente', 'success');
+      loadProyectosData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al eliminar proyecto', 'error');
     }
   };
 
@@ -241,6 +310,37 @@ function AppLayout() {
                     isEditing={!!editingArea}
                     onCancel={() => { setEditingArea(null); setShowAreaForm(false); }}
                     contratistas={contratistas}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'proyectos':
+        return (
+          <div className="page-content">
+            <div style={{ marginBottom: '20px' }}>
+              <button className="btn btn-primary" onClick={() => { setEditingProyecto(null); setShowProyectoForm(true); }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Nuevo Proyecto
+              </button>
+            </div>
+            <div className="mini-stats-bar">
+              <div className="mini-stat"><span className="mini-stat-value">{proyectosStats.total}</span><span className="mini-stat-label">Total</span></div>
+              <div className="mini-stat"><span className="mini-stat-value active-val">{proyectosStats.activos}</span><span className="mini-stat-label">Activos</span></div>
+              <div className="mini-stat"><span className="mini-stat-value inactive-val">{proyectosStats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
+            </div>
+            <ProyectosTable proyectos={proyectos} total={proyectosTotal} onEdit={(p) => { setEditingProyecto(p); setShowProyectoForm(true); }} onDelete={handleDeleteProyecto} loading={proyectosLoading} />
+            {showProyectoForm && (
+              <div className="modal-overlay" onClick={() => { setEditingProyecto(null); setShowProyectoForm(false); }}>
+                <div className="modal-content" onClick={e => e.stopPropagation()}>
+                  <ProyectoForm
+                    onSubmit={editingProyecto ? handleUpdateProyecto : handleCreateProyecto}
+                    initialData={editingProyecto ? { nombre: editingProyecto.nombre, fechaInicio: editingProyecto.fechaInicio?.split('T')[0] || editingProyecto.fechaInicio, fechaFin: editingProyecto.fechaFin?.split('T')[0] || editingProyecto.fechaFin, areaId: editingProyecto.areaId } : undefined}
+                    isEditing={!!editingProyecto}
+                    onCancel={() => { setEditingProyecto(null); setShowProyectoForm(false); }}
+                    areas={areas}
                   />
                 </div>
               </div>

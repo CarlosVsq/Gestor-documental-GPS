@@ -56,8 +56,10 @@ npm run test
 ## Historia de Usuario Implementada
 
 **HU-01: CRUD de Contratistas**
-
-> Como **administrador**, quiero crear, leer, actualizar y eliminar **Contratistas** para mantener un registro actualizado de las empresas que gestionan documentos.
+**HU-02: CRUD de Áreas**
+**HU-03: CRUD de Proyectos**
+**HU-06: Carga de Documentos**
+**HU-18: Login de Usuarios**
 
 ## Equipo
 
