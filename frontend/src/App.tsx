@@ -157,6 +157,8 @@ function AppLayout() {
       setEditingContratista(null);
       setShowForm(false);
       loadData();
+      loadAreasData();
+      loadProyectosData();
     } catch (err: any) {
       showNotification(err.message || 'Error al actualizar', 'error');
     }
@@ -193,6 +195,7 @@ function AppLayout() {
       setEditingArea(null);
       setShowAreaForm(false);
       loadAreasData();
+      loadProyectosData();
     } catch (err: any) {
       showNotification(err.message || 'Error al actualizar área', 'error');
     }

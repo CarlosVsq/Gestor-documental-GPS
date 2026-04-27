@@ -109,8 +109,12 @@ export class ProyectosService {
         }
 
         Object.assign(proyecto, updateDto);
+        if (updateDto.areaId !== undefined) {
+            proyecto.area = { id: updateDto.areaId } as any;
+        }
         proyecto.actualizadoPor = 'admin';
-        return this.proyectoRepository.save(proyecto);
+        await this.proyectoRepository.save(proyecto);
+        return this.findOne(id);
     }
 
     async remove(id: number): Promise<void> {
