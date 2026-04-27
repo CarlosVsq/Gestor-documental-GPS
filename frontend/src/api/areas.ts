@@ -1,55 +1,94 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AuthService } from './auth/auth.service';
+/**
+ * API Client para Áreas (HU-02)
+ * Comunica el frontend con el backend NestJS
+ */
 
-async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+const API_BASE = '/api/areas';
 
-    // Habilitar CORS para el frontend
-    app.enableCors({
-        origin: ['http://localhost:5173', 'http://localhost:3000'],
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        credentials: true,
-    });
-
-    // Prefijo global de la API
-    app.setGlobalPrefix('api');
-
-    // Validación global de DTOs
-    app.useGlobalPipes(
-        new ValidationPipe({
-            whitelist: true,
-            forbidNonWhitelisted: true,
-            transform: true,
-        }),
-    );
-
-    // Configuración de Swagger
-    const config = new DocumentBuilder()
-        .setTitle('SGD - Sistema de Gestión Documental')
-        .setDescription(
-            'API REST del Sistema de Gestión Documental. ' +
-            'Proyecto desarrollado para la asignatura Gestión de Proyectos de Software - UBB.',
-        )
-        .setVersion('1.0')
-        .addTag('auth', 'Autenticación y Sesión (HU-25)')
-        .addTag('contratistas', 'Gestión de Contratistas (HU-01)')
-
-        .addBearerAuth()
-        .build();
-
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document);
-
-    // Seed: crear usuario admin por defecto si no existe
-    const authService = app.get(AuthService);
-    await authService.seedAdmin();
-
-    const port = process.env.PORT || 3000;
-    await app.listen(port);
-    console.log(`🚀 SGD Backend corriendo en: http://localhost:${port}`);
-    console.log(`📖 Swagger disponible en: http://localhost:${port}/api/docs`);
+export interface Area {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  contratistaId: number;
+  activo: boolean;
+  contratista?: {
+    id: number;
+    nombre: string;
+    rut: string;
+  };
+  creadoPor: string;
+  actualizadoPor: string;
+  creadoEn: string;
+  actualizadoEn: string;
 }
-bootstrap();
+
+export interface CreateAreaDto {
+  nombre: string;
+  descripcion?: string;
+  contratistaId: number;
+}
+
+export interface AreasResponse {
+  data: Area[];
+  total: number;
+}
+
+export interface AreaStats {
+  total: number;
+  activas: number;
+  inactivas: number;
+}
+
+export const areasApi = {
+  async getAll(page = 1, limit = 10): Promise<AreasResponse> {
+    const res = await fetch(`${API_BASE}?page=${page}&limit=${limit}`);
+    if (!res.ok) throw new Error('Error al obtener áreas');
+    return res.json();
+  },
+
+  async getOne(id: number): Promise<Area> {
+    const res = await fetch(`${API_BASE}/${id}`);
+    if (!res.ok) throw new Error('Área no encontrada');
+    return res.json();
+  },
+
+  async create(data: CreateAreaDto): Promise<Area> {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Error al crear área');
+    }
+    return res.json();
+  },
+
+  async update(id: number, data: Partial<CreateAreaDto>): Promise<Area> {
+    const res = await fetch(`${API_BASE}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Error al actualizar área');
+    }
+    return res.json();
+  },
+
+  async delete(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Error al eliminar área');
+    }
+  },
+
+  async getStats(): Promise<AreaStats> {
+    const res = await fetch(`${API_BASE}/stats`);
+    if (!res.ok) throw new Error('Error al obtener estadísticas');
+    return res.json();
+  },
+};
