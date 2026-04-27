@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { AreasService } from './areas.service';
 import { CreateAreaDto } from './dto/create-area.dto';
-import { UpdateAreaDto } from './dto/update-area-dto';
+import { UpdateAreaDto } from './dto/update-area.dto';
 import { Area } from './area.entity';
 
 
