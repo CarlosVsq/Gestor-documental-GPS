@@ -95,7 +95,14 @@ cd frontend && npm run dev
 ├── .env.example
 └── guia_microservicios.md   # Guía oficial para crear nuevos microservicios
 ```
+## HU Totalmente Listas
 
+- **HU-01: CRUD de Contratistas**
+- **HU-02: CRUD de Áreas**
+- **HU-03: CRUD de Proyectos**
+- **HU-06: Carga de Documentos**
+- **HU-18: Login de Usuarios**
+  
 ## Equipo
 
 - Diego Alamos Vallejos
