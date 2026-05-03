@@ -9,58 +9,100 @@ Sistema de gestión documental desarrollado como "Hola Mundo" para la asignatura
 | Capa | Tecnología | Versión |
 |------|------------|---------|
 | Frontend | React + Vite | React 18 |
-| Backend | NestJS + TypeScript | NestJS 10 |
+| Backend | NestJS + TypeScript (Microservicios) | NestJS 10 |
 | Base de Datos | PostgreSQL | 15 |
 | Caché | Redis | 7 |
 | ORM | TypeORM | 0.3 |
-| Testing | Jest | 29 |
-| Docs API | Swagger / OpenAPI | 7 |
+| Comunicación | TCP (@nestjs/microservices) | - |
+| Docs API | Swagger / OpenAPI (centralizado en Gateway) | 7 |
 | Contenedores | Docker + Docker Compose | - |
-| CI/CD | GitHub Actions + GHCR | - |
+
+## Arquitectura de Microservicios
+
+```
+Frontend (React) → HTTP → API Gateway (:3000) → TCP → ms-auth (:3001)
+                                                    → ms-mantenedores (:3002)
+                                                    → ms-documentos (:3003)
+```
+
+| Servicio | Puerto | Transporte | Responsabilidad |
+|----------|--------|------------|-----------------|
+| `api-gateway` | 3000 | HTTP | Punto de entrada, Swagger, JWT, CORS, Agregación |
+| `ms-auth` | 3001 | TCP | Login, JWT, CRUD usuarios |
+| `ms-mantenedores` | 3002 | TCP | Contratistas, Áreas, Proyectos |
+| `ms-documentos` | 3003 | TCP | Gestión documental y archivos físicos |
+
+> **Nota de Arquitectura**: Cada microservicio es **100% independiente** y aislado. No existen dependencias de carpetas físicas como `shared/`. Cada servicio define sus constantes y configuraciones internamente en su carpeta `src/common/constants.ts`. El orquestador (`api-gateway`) se encarga de la agregación de datos (API Composition) cruzando información de múltiples microservicios si es necesario.
 
 ## 🚀 Inicio Rápido
 
 ### Opción 1: Docker Compose (recomendado)
 
 ```bash
-docker-compose up --build
+# 1. Configurar variables de entorno
+cp .env.example .env
+
+# 2. Levantar todo el stack
+docker compose up --build
 ```
 
-- Frontend: http://localhost
-- Backend API: http://localhost:3000/api
-- Swagger Docs: http://localhost:3000/api/docs
+- Frontend: http://localhost:8040
+- Backend API: http://localhost:8040/api
+- Swagger Docs: http://localhost:8040/api/docs
 
 ### Opción 2: Desarrollo local
 
 ```bash
-# Terminal 1 — Backend
-cd backend
-npm install
-npm run start:dev
+# 1. Instalar dependencias de cada servicio aisladamente
+cd backend/api-gateway && npm install
+cd ../ms-auth && npm install
+cd ../ms-mantenedores && npm install
+cd ../ms-documentos && npm install
 
-# Terminal 2 — Frontend
-cd frontend
-npm install
-npm run dev
+# 2. Instalar frontend
+cd ../../frontend && npm install
 ```
-
-> **Nota:** Necesitas PostgreSQL corriendo en `localhost:5432` con la base de datos `sgd_db`.
-
-## Tests
 
 ```bash
-cd backend
-npm run test
+# Terminal 1 — ms-auth
+cd backend/ms-auth && npm run start:dev
+
+# Terminal 2 — ms-mantenedores
+cd backend/ms-mantenedores && npm run start:dev
+
+# Terminal 3 — ms-documentos
+cd backend/ms-documentos && npm run start:dev
+
+# Terminal 4 — API Gateway
+cd backend/api-gateway && npm run start:dev
+
+# Terminal 5 — Frontend
+cd frontend && npm run dev
 ```
 
-## Historia de Usuario Implementada
+> **Nota:** Para desarrollo local necesitas PostgreSQL corriendo en `localhost:5432` con la base de datos `sgd_db`. Sin PostgreSQL, los servicios usarán SQLite automáticamente.
 
-**HU-01: CRUD de Contratistas**
-**HU-02: CRUD de Áreas**
-**HU-03: CRUD de Proyectos**
-**HU-06: Carga de Documentos**
-**HU-18: Login de Usuarios**
+## Estructura del Proyecto
 
+```
+├── backend/
+│   ├── api-gateway/         # Gateway HTTP (Swagger, JWT, CORS, Composición)
+│   ├── ms-auth/             # Microservicio de autenticación
+│   ├── ms-mantenedores/     # Microservicio de mantenedores
+│   └── ms-documentos/       # Microservicio de documentos
+├── frontend/                # React + Vite
+├── docker-compose.yml
+├── .env.example
+└── guia_microservicios.md   # Guía oficial para crear nuevos microservicios
+```
+## HU Totalmente Listas
+
+- **HU-01: CRUD de Contratistas**
+- **HU-02: CRUD de Áreas**
+- **HU-03: CRUD de Proyectos**
+- **HU-06: Carga de Documentos**
+- **HU-18: Login de Usuarios**
+  
 ## Equipo
 
 - Diego Alamos Vallejos
