@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ContratistaForm from './components/ContratistaForm';
@@ -29,7 +29,7 @@ const getInitials = (name: string) =>
   name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
 const getRoleLabel = (rol: string) => {
-  const roles: Record<string, string> = { admin: 'Administrador', supervisor: 'Supervisor', colaborador: 'Colaborador', lectura: 'Solo Lectura' };
+  const roles: Record<string, string> = { admin: 'Administrador', supervisor: 'Supervisor', colaborador: 'Colaborador', auditor: 'Auditor', gerente: 'Gerente', contratista: 'Contratista' };
   return roles[rol] || rol;
 };
 
@@ -50,7 +50,9 @@ const getPageHeaderInfo = (page: ActivePage) => {
 
 function AppLayout() {
   const { user, logout } = useAuth();
-  const [activePage, setActivePage] = useState<ActivePage>('dashboard');
+  const location = useLocation();
+  const initialPage = (location.state?.initialPage as ActivePage) || 'dashboard';
+  const [activePage, setActivePage] = useState<ActivePage>(initialPage);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // --- Contratistas state (reutilizado en Dashboard y ContratistasPage) ---

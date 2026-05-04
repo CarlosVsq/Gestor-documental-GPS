@@ -20,10 +20,15 @@ const EMPTY_FORM: UserFormData = { nombre: '', email: '', password: '', rol: 'ad
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrador' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'colaborador', label: 'Colaborador' },
+  { value: 'auditor', label: 'Auditor' },
+  { value: 'gerente', label: 'Gerente' },
+  { value: 'contratista', label: 'Contratista' },
 ];
 
 const getRoleLabel = (rol: string) => {
-  const map: Record<string, string> = { admin: 'Administrador', supervisor: 'Supervisor', colaborador: 'Colaborador', lectura: 'Solo Lectura' };
+  const map: Record<string, string> = { admin: 'Administrador', supervisor: 'Supervisor', colaborador: 'Colaborador', auditor: 'Auditor', gerente: 'Gerente', contratista: 'Contratista' };
   return map[rol] || rol;
 };
 
@@ -139,7 +144,7 @@ export default function UsersPage({ onNotify }: UsersPageProps) {
                   <th>Rol</th>
                   <th>Estado</th>
                   <th>Registrado</th>
-                  <th style={{width: '100px'}}>Acciones</th>
+                  <th style={{ width: '100px' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
