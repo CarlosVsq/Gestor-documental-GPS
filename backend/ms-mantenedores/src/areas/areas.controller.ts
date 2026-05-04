@@ -16,8 +16,8 @@ export class AreasController {
     }
 
     @MessagePattern(AREAS_PATTERNS.FIND_ALL)
-    async findAll(@Payload() data: { page: number; limit: number }) {
-        return this.areasService.findAll(data.page, data.limit);
+    async findAll(@Payload() data: { page: number; limit: number; contratistaId?: number }) {
+        return this.areasService.findAll(data.page, data.limit, data.contratistaId);
     }
 
     @MessagePattern(AREAS_PATTERNS.FIND_ONE)
@@ -36,7 +36,7 @@ export class AreasController {
     }
 
     @MessagePattern(AREAS_PATTERNS.STATS)
-    async getStats() {
-        return this.areasService.getStats();
+    async getStats(@Payload() data: { contratistaId?: number }) {
+        return this.areasService.getStats(data.contratistaId);
     }
 }

@@ -31,11 +31,11 @@ export class AuthService {
 
   async login(loginDto: { email: string; password: string }) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
-    const payload = { sub: user.id, email: user.email, rol: user.rol };
+    const payload = { sub: user.id, email: user.email, rol: user.rol, contratistaId: user.contratistaId };
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol },
+      user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, contratistaId: user.contratistaId },
     };
   }
 
@@ -88,12 +88,21 @@ export class AuthService {
       throw new RpcException({ statusCode: 409, message: `El email ${dto.email} ya está registrado` });
     }
 
+    if (dto.rol && !Object.values(Role).includes(dto.rol)) {
+      throw new RpcException({ statusCode: 400, message: `Rol '${dto.rol}' inválido` });
+    }
+
+    if (dto.rol === Role.CONTRATISTA && !dto.contratistaId) {
+      throw new RpcException({ statusCode: 400, message: 'El rol contratista requiere un contratistaId' });
+    }
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = this.userRepository.create({
       nombre: dto.nombre,
       email: dto.email,
       password: hashedPassword,
       rol: dto.rol || Role.ADMIN,
+      contratistaId: dto.rol === Role.CONTRATISTA ? dto.contratistaId : null,
       activo: true,
     });
 
@@ -117,7 +126,24 @@ export class AuthService {
     }
 
     if (dto.nombre) user.nombre = dto.nombre;
-    if (dto.rol) user.rol = dto.rol;
+    if (dto.rol) {
+      if (!Object.values(Role).includes(dto.rol)) {
+        throw new RpcException({ statusCode: 400, message: `Rol '${dto.rol}' inválido` });
+      }
+      user.rol = dto.rol;
+    }
+    
+    // Si envían rol contratista o cambian a contratista
+    if (user.rol === Role.CONTRATISTA) {
+      if (dto.contratistaId) {
+        user.contratistaId = dto.contratistaId;
+      } else if (!user.contratistaId) {
+         throw new RpcException({ statusCode: 400, message: 'El rol contratista requiere un contratistaId' });
+      }
+    } else {
+      user.contratistaId = null; // Limpiar si cambia a otro rol
+    }
+
     if (dto.password) user.password = await bcrypt.hash(dto.password, 10);
 
     const saved = await this.userRepository.save(user);

@@ -35,6 +35,9 @@ export class User {
   @Column({ default: true })
   activo: boolean;
 
+  @Column({ nullable: true })
+  contratistaId: number;
+
   @CreateDateColumn()
   creadoEn: Date;
 

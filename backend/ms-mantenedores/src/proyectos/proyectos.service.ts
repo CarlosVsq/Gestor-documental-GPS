@@ -58,8 +58,11 @@ export class ProyectosService {
     async findAll(
         page: number = 1,
         limit: number = 10,
+        contratistaId?: number,
     ): Promise<{ data: Proyecto[]; total: number }> {
+        const whereCondition = contratistaId ? { area: { contratistaId } } : {};
         const [data, total] = await this.proyectoRepository.findAndCount({
+            where: whereCondition,
             relations: ['area', 'area.contratista'],
             skip: (page - 1) * limit,
             take: limit,
@@ -106,9 +109,10 @@ export class ProyectosService {
         await this.proyectoRepository.softRemove(proyecto);
     }
 
-    async getStats(): Promise<{ total: number; activos: number; inactivos: number }> {
-        const total = await this.proyectoRepository.count();
-        const activos = await this.proyectoRepository.count({ where: { activo: true } });
+    async getStats(contratistaId?: number): Promise<{ total: number; activos: number; inactivos: number }> {
+        const whereBase = contratistaId ? { area: { contratistaId } } : {};
+        const total = await this.proyectoRepository.count({ where: whereBase });
+        const activos = await this.proyectoRepository.count({ where: { ...whereBase, activo: true } });
         return {
             total,
             activos,

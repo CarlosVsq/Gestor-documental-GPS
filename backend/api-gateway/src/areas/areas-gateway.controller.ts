@@ -2,14 +2,18 @@ import {
   Controller, Get, Post, Put, Delete,
   Body, Param, Query, ParseIntPipe,
   HttpCode, HttpStatus, Inject, HttpException,
+  UseGuards, Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { SERVICE_NAMES, AREAS_PATTERNS } from '../common/constants';
+import { SERVICE_NAMES, AREAS_PATTERNS, Role } from '../common/constants';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('areas')
 @Controller('areas')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class AreasGatewayController {
   constructor(
     @Inject(SERVICE_NAMES.MANTENEDORES) private readonly client: ClientProxy,
@@ -33,11 +37,15 @@ export class AreasGatewayController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Listado de áreas' })
-  async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+  async findAll(@Query('page') page?: string, @Query('limit') limit?: string, @Request() req?: any) {
     const p = Number(page) || 1;
     const l = Number(limit) || 10;
+    
+    // Si es contratista, inyectar el contratistaId como filtro
+    const filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
+    
     try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.FIND_ALL, { page: p, limit: l }));
+      return await firstValueFrom(this.client.send(AREAS_PATTERNS.FIND_ALL, { page: p, limit: l, contratistaId: filterContratistaId }));
     } catch (error) {
       throw new HttpException(error.message, error.statusCode || 500);
     }
@@ -46,9 +54,10 @@ export class AreasGatewayController {
   @Get('stats')
   @ApiOperation({ summary: 'Obtener estadísticas de áreas' })
   @ApiResponse({ status: 200, description: 'Estadísticas de áreas' })
-  async getStats() {
+  async getStats(@Request() req: any) {
+    const filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
     try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.STATS, {}));
+      return await firstValueFrom(this.client.send(AREAS_PATTERNS.STATS, { contratistaId: filterContratistaId }));
     } catch (error) {
       throw new HttpException(error.message, error.statusCode || 500);
     }

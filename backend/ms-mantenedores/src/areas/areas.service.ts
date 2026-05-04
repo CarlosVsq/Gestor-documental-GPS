@@ -54,8 +54,11 @@ export class AreasService {
     async findAll(
         page: number = 1,
         limit: number = 10,
+        contratistaId?: number,
     ): Promise<{ data: Area[]; total: number }> {
+        const whereCondition = contratistaId ? { contratistaId } : {};
         const [data, total] = await this.areaRepository.findAndCount({
+            where: whereCondition,
             relations: ['contratista'],
             skip: (page - 1) * limit,
             take: limit,
@@ -124,9 +127,10 @@ export class AreasService {
         await this.areaRepository.softRemove(area);
     }
 
-    async getStats(): Promise<{ total: number; activas: number; inactivas: number }> {
-        const total = await this.areaRepository.count();
-        const activas = await this.areaRepository.count({ where: { activo: true } });
+    async getStats(contratistaId?: number): Promise<{ total: number; activas: number; inactivas: number }> {
+        const whereBase = contratistaId ? { contratistaId } : {};
+        const total = await this.areaRepository.count({ where: whereBase });
+        const activas = await this.areaRepository.count({ where: { ...whereBase, activo: true } });
         return {
             total,
             activas,

@@ -81,13 +81,13 @@ body {
 }
 
 .app-container {
-  max-width: 1100px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 40px 32px;
 }
 
 .page-content {
-  max-width: 1100px;
+  max-width: 100%;
 }
 
 /* --- Sidebar Toggle Button --- */
@@ -399,8 +399,8 @@ body {
 /* Quick Actions */
 .quick-actions-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 .quick-action-btn {
