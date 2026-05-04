@@ -100,8 +100,11 @@ cd frontend && npm run dev
 - **HU-01: CRUD de Contratistas**
 - **HU-02: CRUD de Áreas**
 - **HU-03: CRUD de Proyectos**
+- **HU-05: Integridad Jerárquica**
 - **HU-06: Carga de Documentos**
 - **HU-18: Login de Usuarios**
+- **HU-19: Gestión de Usuarios internos**
+- **HU-25: Control de Visibilidad por Contratista**
   
 ## Equipo
 
