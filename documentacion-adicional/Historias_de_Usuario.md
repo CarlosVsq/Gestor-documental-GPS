@@ -111,21 +111,40 @@ Sistema de alertas y notificaciones para mantener informados a los usuarios.
 | **HU-34** | Como **supervisor**, quiero recibir una notificación cuando un contratista suba un nuevo documento para poder revisarlo oportunamente. | - Notificación in-app en tiempo real<br>- Badge de contador de no leídas<br>- Click lleva directamente al documento | Media | RF3.1 |
 | **HU-35** | Como **colaborador**, quiero recibir una notificación cuando un requerimiento que me asignaron cambie de estado para estar al tanto del progreso. | - Notificación al cambiar estado de un requerimiento asignado<br>- Indica: quién cambió, de qué estado a cuál<br>- Historial de notificaciones | Media | RF3.1 |
 
+## Épica 9: Gestión Central de Requerimientos (Workflow Core)
+
+Esta épica define la existencia del "ticket" (Requerimiento) como el motor que orquesta la jerarquía y los documentos.
+
+| ID        | Historia de Usuario                                          | Criterios de Aceptación                                      | Prioridad | RF    |
+| --------- | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- | ----- |
+| **HU-N1** | Como **colaborador**, quiero crear un **Requerimiento** vinculado a un Proyecto, Área y Contratista para formalizar el inicio de una gestión documental. | - El sistema debe generar un ID único de seguimiento.<br>- Selección obligatoria de Proyecto, Área y Contratista desde los mantenedores[cite: 1, 2].<br>- El estado inicial debe ser siempre "Abierto"[cite: 2]. | Alta      | RF3.1 |
+| **HU-N2** | Como **usuario**, quiero clasificar un Requerimiento mediante **Categoría** y **Subtipo** al momento de su creación para asegurar su correcta indexación. | - Menús desplegables alimentados por los mantenedores de Categorías y Subtipos[cite: 1, 2].<br>- Los metadatos elegidos deben quedar vinculados permanentemente al Requerimiento. | Alta      | RF1.1 |
+| **HU-N3** | Como **administrador**, quiero que la visibilidad de los Requerimientos esté filtrada por el rol del usuario para mantener la confidencialidad entre empresas. | - El contratista solo visualiza requerimientos donde su `contratista_id` coincida[cite: 1, 2].<br>- El administrador y supervisores de área mantienen vista global o por área respectiva[cite: 1, 2]. | Alta      | RF3.3 |
+
 ---
 
-## Resumen
+## Épica 10: Integración con Infraestructura SharePoint (Storage Logic)
 
-| Épica | Cantidad HU | Prioridad Principal |
-|-------|-------------|---------------------|
-| 1. Gestión de Mantenedores | 6 | Alta |
-| 2. Gestión Documental y Captura | 7 | Alta |
-| 3. Flujo de Trabajo y Trazabilidad | 6 | Alta |
-| 4. Reportabilidad | 5 | Media |
-| 5. Autenticación y Seguridad | 3 | Alta |
-| 6. Formularios y Generación PDF | 3 | Alta - Media |
-| 7. Búsqueda y Navegación | 3 | Alta - Media |
-| 8. Notificaciones | 2 | Media |
-| **Total** | **35** | |
+Define cómo el Requerimiento interactúa con la plataforma de almacenamiento de Microsoft.
+
+| ID        | Historia de Usuario                                          | Criterios de Aceptación                                      | Prioridad | RF    |
+| --------- | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- | ----- |
+| **HU-N4** | Como **sistema**, debo crear automáticamente un **Document Set** en SharePoint por cada nuevo Requerimiento creado para agrupar sus expedientes. | - Creación automática del contenedor inteligente en la biblioteca de SharePoint Online[cite: 1].<br>- El nombre del Document Set debe contener el ID del Requerimiento para fácil búsqueda[cite: 1, 2]. | Alta      | RF1.3 |
+| **HU-N5** | Como **sistema**, debo propagar (heredar) los metadatos del Requerimiento a todos los archivos dentro del **Document Set** para evitar la carga manual de datos. | - Los archivos subidos heredan automáticamente Categoría, Subtipo y Proyecto del requerimiento padre[cite: 1].<br>- Sincronización de campos de sitio de SharePoint con los datos del sistema React[cite: 1]. | Alta      | RF1.4 |
+| **HU-N6** | Como **colaborador**, quiero acceder a la carpeta de documentos (Document Set) directamente desde la vista del Requerimiento para agilizar la gestión. | - Enlace directo desde el "ticket" a su repositorio de archivos en la interfaz[cite: 1, 2].<br>- Mantener el control de permisos de SharePoint (Colaborador/Lectura) en este acceso[cite: 1, 2]. | Alta      | RF2.3 |
+
+---
+
+## Épica 11: Validaciones de Negocio y Cierre
+
+Reglas finales para asegurar que el proceso documental se cumpla estrictamente.
+
+| ID        | Historia de Usuario                                          | Criterios de Aceptación                                      | Prioridad | RF    |
+| --------- | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- | ----- |
+| **HU-N7** | Como **sistema**, debo validar que un Requerimiento posea al menos un documento clasificado antes de permitir el cambio de estado a "En Progreso". | - Impedir avance de estado si el Document Set está vacío[cite: 1, 2].<br>- Mensaje de alerta indicando la falta de documentación técnica[cite: 1]. | Media     | RF3.1 |
+| **HU-N8** | Como **supervisor**, quiero que el sistema genere un reporte de auditoría final al cerrar un Requerimiento para consolidar la trazabilidad del proceso. | - Documento resumen con el log de todas las acciones desde "Abierto" hasta "Cerrado"[cite: 2].<br>- Almacenamiento automático de este reporte en el Document Set correspondiente[cite: 1, 2]. | Media     | RF3.2 |
+
+
 
 ### Distribución por Prioridad
 
