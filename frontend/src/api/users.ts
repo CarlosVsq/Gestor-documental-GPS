@@ -11,6 +11,7 @@ export interface UserRecord {
   nombre: string;
   email: string;
   rol: string;
+  contratistaId?: number;
   activo: boolean;
   creadoEn: string;
   actualizadoEn: string;
@@ -21,6 +22,7 @@ export interface CreateUserDto {
   email: string;
   password: string;
   rol?: string;
+  contratistaId?: number;
 }
 
 export interface UpdateUserDto {
@@ -28,6 +30,7 @@ export interface UpdateUserDto {
   email?: string;
   password?: string;
   rol?: string;
+  contratistaId?: number;
 }
 
 export const usersApi = {

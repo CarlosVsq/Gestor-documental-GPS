@@ -16,8 +16,8 @@ export class ProyectosController {
     }
 
     @MessagePattern(PROYECTOS_PATTERNS.FIND_ALL)
-    async findAll(@Payload() data: { page: number; limit: number }) {
-        return this.proyectosService.findAll(data.page, data.limit);
+    async findAll(@Payload() data: { page: number; limit: number; contratistaId?: number }) {
+        return this.proyectosService.findAll(data.page, data.limit, data.contratistaId);
     }
 
     @MessagePattern(PROYECTOS_PATTERNS.FIND_ONE)
@@ -36,7 +36,7 @@ export class ProyectosController {
     }
 
     @MessagePattern(PROYECTOS_PATTERNS.STATS)
-    async getStats() {
-        return this.proyectosService.getStats();
+    async getStats(@Payload() data: { contratistaId?: number }) {
+        return this.proyectosService.getStats(data.contratistaId);
     }
 }

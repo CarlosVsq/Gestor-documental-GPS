@@ -4,7 +4,11 @@
  */
 export enum Role {
   ADMIN = 'admin',
-  EDITOR = 'editor',
+  SUPERVISOR = 'supervisor',
+  GERENTE = 'gerente',
+  COLABORADOR = 'colaborador',
+  AUDITOR = 'auditor',
+  CONTRATISTA = 'contratista',
 }
 
 export const SERVICE_NAMES = {

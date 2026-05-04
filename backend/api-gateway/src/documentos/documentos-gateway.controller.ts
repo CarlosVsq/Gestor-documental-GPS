@@ -54,7 +54,7 @@ export class DocumentosGatewayController {
   ) {}
 
   @Post('upload')
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.COLABORADOR)
   @ApiOperation({ summary: 'Subir un nuevo documento técnico' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -99,7 +99,7 @@ export class DocumentosGatewayController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.COLABORADOR)
   @ApiOperation({ summary: 'Obtener todos los documentos subidos' })
   async findAll() {
     try {
@@ -119,7 +119,7 @@ export class DocumentosGatewayController {
   }
 
   @Get(':id/download')
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.COLABORADOR)
   @ApiOperation({ summary: 'Descargar el archivo físico de un documento' })
   async downloadFile(
     @Param('id', ParseIntPipe) id: number,

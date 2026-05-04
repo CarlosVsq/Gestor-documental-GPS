@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usersApi } from '../api/users';
 import type { UserRecord, CreateUserDto, UpdateUserDto } from '../api/users';
+import { contratistasApi } from '../api/contratistas';
+import type { Contratista } from '../api/contratistas';
 
 /**
  * UsersPage — HU-19
@@ -14,6 +16,7 @@ interface UserFormData {
   email: string;
   password: string;
   rol: string;
+  contratistaId?: number;
 }
 
 const EMPTY_FORM: UserFormData = { nombre: '', email: '', password: '', rol: 'admin' };
@@ -38,11 +41,30 @@ interface UsersPageProps {
 
 export default function UsersPage({ onNotify }: UsersPageProps) {
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [contratistas, setContratistas] = useState<Contratista[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<UserRecord | null>(null);
   const [form, setForm] = useState<UserFormData>(EMPTY_FORM);
+
+  const loadUsersAndContratistas = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [usersData, contratistasData] = await Promise.all([
+        usersApi.getAll(),
+        contratistasApi.getAll(1, 100), // Asumimos max 100 por ahora
+      ]);
+      setUsers(usersData);
+      setContratistas(contratistasData.data);
+    } catch {
+      onNotify('Error al cargar datos', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [onNotify]);
+
+  useEffect(() => { loadUsersAndContratistas(); }, [loadUsersAndContratistas]);
 
   const loadUsers = useCallback(async () => {
     try {
@@ -56,7 +78,8 @@ export default function UsersPage({ onNotify }: UsersPageProps) {
     }
   }, [onNotify]);
 
-  useEffect(() => { loadUsers(); }, [loadUsers]);
+  // Se reemplaza el viejo useEffect por el que carga ambos
+  // useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const filtered = users.filter(u =>
     u.nombre.toLowerCase().includes(search.toLowerCase()) ||
@@ -64,7 +87,7 @@ export default function UsersPage({ onNotify }: UsersPageProps) {
   );
 
   const handleOpenCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
-  const handleOpenEdit = (user: UserRecord) => { setEditing(user); setForm({ nombre: user.nombre, email: user.email, password: '', rol: user.rol }); setShowForm(true); };
+  const handleOpenEdit = (user: UserRecord) => { setEditing(user); setForm({ nombre: user.nombre, email: user.email, password: '', rol: user.rol, contratistaId: user.contratistaId }); setShowForm(true); };
   const handleClose = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,11 +95,13 @@ export default function UsersPage({ onNotify }: UsersPageProps) {
     try {
       if (editing) {
         const dto: UpdateUserDto = { nombre: form.nombre, email: form.email, rol: form.rol };
+        if (form.rol === 'contratista') dto.contratistaId = form.contratistaId;
         if (form.password) dto.password = form.password;
         await usersApi.update(editing.id, dto);
         onNotify('Usuario actualizado exitosamente', 'success');
       } else {
         const dto: CreateUserDto = { nombre: form.nombre, email: form.email, password: form.password, rol: form.rol };
+        if (form.rol === 'contratista') dto.contratistaId = form.contratistaId;
         await usersApi.create(dto);
         onNotify('Usuario creado exitosamente', 'success');
       }
@@ -170,6 +195,7 @@ export default function UsersPage({ onNotify }: UsersPageProps) {
                 <tr>
                   <th>Usuario</th>
                   <th>Rol</th>
+                  <th>Contratista</th>
                   <th>Estado</th>
                   <th>Registrado</th>
                   <th style={{ width: '100px' }}>Acciones</th>
@@ -190,6 +216,17 @@ export default function UsersPage({ onNotify }: UsersPageProps) {
                       </div>
                     </td>
                     <td><span className="badge badge-info-light">{getRoleLabel(user.rol)}</span></td>
+                    <td>
+                      {user.rol === 'contratista' ? (
+                        <span className="cell-muted" style={{ fontSize: '0.85rem' }}>
+                          {user.contratistaId 
+                            ? contratistas.find(c => c.id === user.contratistaId)?.nombre || 'Desconocido'
+                            : 'Sin asignar'}
+                        </span>
+                      ) : (
+                        <span className="cell-muted" style={{ fontSize: '0.85rem' }}>-</span>
+                      )}
+                    </td>
                     <td>
                       <span className={`status-badge ${user.activo ? 'status-active' : 'status-inactive'}`}>
                         <span className="status-dot" />
@@ -253,10 +290,20 @@ export default function UsersPage({ onNotify }: UsersPageProps) {
 
                 <div className="field-group">
                   <label htmlFor="user-rol">Rol</label>
-                  <select id="user-rol" value={form.rol} onChange={e => setForm({ ...form, rol: e.target.value })} className="field-select">
+                  <select id="user-rol" value={form.rol} onChange={e => setForm({ ...form, rol: e.target.value, contratistaId: undefined })} className="field-select">
                     {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
+
+                {form.rol === 'contratista' && (
+                  <div className="field-group">
+                    <label htmlFor="user-contratistaId">Contratista <span className="required">*</span></label>
+                    <select id="user-contratistaId" value={form.contratistaId || ''} onChange={e => setForm({ ...form, contratistaId: Number(e.target.value) })} className="field-select" required>
+                      <option value="" disabled>Seleccione un contratista</option>
+                      {contratistas.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="modal-form-actions">

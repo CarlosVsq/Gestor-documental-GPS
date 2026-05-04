@@ -21,11 +21,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * Valida el payload del JWT y retorna los datos del usuario.
    * Este objeto se inyecta en request.user
    */
-  async validate(payload: { sub: number; email: string; rol: string }) {
+  async validate(payload: { sub: number; email: string; rol: string; contratistaId?: number }) {
     return {
       id: payload.sub,
       email: payload.email,
       rol: payload.rol,
+      contratistaId: payload.contratistaId || null,
     };
   }
 }
