@@ -88,6 +88,10 @@ export class AuthService {
       throw new RpcException({ statusCode: 409, message: `El email ${dto.email} ya está registrado` });
     }
 
+    if (dto.rol && !Object.values(Role).includes(dto.rol)) {
+      throw new RpcException({ statusCode: 400, message: `Rol '${dto.rol}' inválido` });
+    }
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = this.userRepository.create({
       nombre: dto.nombre,
@@ -117,7 +121,12 @@ export class AuthService {
     }
 
     if (dto.nombre) user.nombre = dto.nombre;
-    if (dto.rol) user.rol = dto.rol;
+    if (dto.rol) {
+      if (!Object.values(Role).includes(dto.rol)) {
+        throw new RpcException({ statusCode: 400, message: `Rol '${dto.rol}' inválido` });
+      }
+      user.rol = dto.rol;
+    }
     if (dto.password) user.password = await bcrypt.hash(dto.password, 10);
 
     const saved = await this.userRepository.save(user);
