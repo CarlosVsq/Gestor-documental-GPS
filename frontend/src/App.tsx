@@ -256,7 +256,7 @@ function AppLayout() {
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':
-        return <Dashboard stats={stats} totalContratistas={total} onNavigate={setActivePage} />;
+        return <Dashboard stats={stats} totalContratistas={total} areasTotal={areasTotal} proyectosTotal={proyectosTotal} onNavigate={setActivePage} />;
 
       case 'contratistas':
         return (
