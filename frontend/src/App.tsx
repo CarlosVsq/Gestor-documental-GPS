@@ -42,7 +42,7 @@ const getPageHeaderInfo = (page: ActivePage) => {
     case 'contratistas': return { title: 'Contratistas', desc: 'Gestiona los contratistas registrados en el sistema' };
     case 'areas': return { title: 'Áreas', desc: 'Gestiona las áreas registradas en el sistema' };
     case 'proyectos': return { title: 'Proyectos', desc: 'Gestiona los proyectos vinculados a áreas y contratistas' };
-    case 'usuarios': return { title: 'Usuarios', desc: 'Gestiona los usuarios con acceso al sistema' };
+    case 'usuarios': return { title: 'Administración de Usuarios', desc: 'Gestión de accesos y roles del Sistema de Gestión Documental' };
     case 'documentos': return { title: 'Documentos', desc: 'Sube y centraliza la documentación técnica de las obras' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
   }
