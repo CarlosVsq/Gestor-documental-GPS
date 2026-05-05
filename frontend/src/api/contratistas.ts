@@ -3,6 +3,8 @@
  * Comunica el frontend con el backend NestJS
  */
 
+import { authHeaders } from './auth';
+
 const API_BASE = '/api/contratistas';
 
 export interface Contratista {
@@ -38,13 +40,17 @@ export interface ContratistaStats {
 
 export const contratistasApi = {
   async getAll(page = 1, limit = 10): Promise<ContratistasResponse> {
-    const res = await fetch(`${API_BASE}?page=${page}&limit=${limit}`);
+    const res = await fetch(`${API_BASE}?page=${page}&limit=${limit}`, {
+      headers: authHeaders(),
+    });
     if (!res.ok) throw new Error('Error al obtener contratistas');
     return res.json();
   },
 
   async getOne(id: number): Promise<Contratista> {
-    const res = await fetch(`${API_BASE}/${id}`);
+    const res = await fetch(`${API_BASE}/${id}`, {
+      headers: authHeaders(),
+    });
     if (!res.ok) throw new Error('Contratista no encontrado');
     return res.json();
   },
@@ -52,7 +58,7 @@ export const contratistasApi = {
   async create(data: CreateContratistaDto): Promise<Contratista> {
     const res = await fetch(API_BASE, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     if (!res.ok) {
@@ -65,7 +71,7 @@ export const contratistasApi = {
   async update(id: number, data: Partial<CreateContratistaDto>): Promise<Contratista> {
     const res = await fetch(`${API_BASE}/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     if (!res.ok) {
@@ -76,12 +82,17 @@ export const contratistasApi = {
   },
 
   async delete(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
     if (!res.ok) throw new Error('Error al eliminar contratista');
   },
 
   async getStats(): Promise<ContratistaStats> {
-    const res = await fetch(`${API_BASE}/stats`);
+    const res = await fetch(`${API_BASE}/stats`, {
+      headers: authHeaders(),
+    });
     if (!res.ok) throw new Error('Error al obtener estadísticas');
     return res.json();
   },

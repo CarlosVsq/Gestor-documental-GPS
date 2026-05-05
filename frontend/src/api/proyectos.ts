@@ -2,6 +2,8 @@
  * API Client para Proyectos
  */
 
+import { authHeaders } from './auth';
+
 const API_BASE = '/api/proyectos';
 
 export interface Proyecto {
@@ -47,13 +49,17 @@ export interface ProyectoStats {
 
 export const proyectosApi = {
     async getAll(page = 1, limit = 10): Promise<ProyectosResponse> {
-        const res = await fetch(`${API_BASE}?page=${page}&limit=${limit}`);
+        const res = await fetch(`${API_BASE}?page=${page}&limit=${limit}`, {
+            headers: authHeaders(),
+        });
         if (!res.ok) throw new Error('Error al obtener proyectos');
         return res.json();
     },
 
     async getOne(id: number): Promise<Proyecto> {
-        const res = await fetch(`${API_BASE}/${id}`);
+        const res = await fetch(`${API_BASE}/${id}`, {
+            headers: authHeaders(),
+        });
         if (!res.ok) throw new Error('Proyecto no encontrado');
         return res.json();
     },
@@ -61,7 +67,7 @@ export const proyectosApi = {
     async create(data: CreateProyectoDto): Promise<Proyecto> {
         const res = await fetch(API_BASE, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(data),
         });
         if (!res.ok) {
@@ -74,7 +80,7 @@ export const proyectosApi = {
     async update(id: number, data: Partial<CreateProyectoDto>): Promise<Proyecto> {
         const res = await fetch(`${API_BASE}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(data),
         });
         if (!res.ok) {
@@ -85,7 +91,10 @@ export const proyectosApi = {
     },
 
     async delete(id: number): Promise<void> {
-        const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE}/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+        });
         if (!res.ok) {
             const err = await res.json();
             throw new Error(err.message || 'Error al eliminar proyecto');
@@ -93,7 +102,9 @@ export const proyectosApi = {
     },
 
     async getStats(): Promise<ProyectoStats> {
-        const res = await fetch(`${API_BASE}/stats`);
+        const res = await fetch(`${API_BASE}/stats`, {
+            headers: authHeaders(),
+        });
         if (!res.ok) throw new Error('Error al obtener estadísticas');
         return res.json();
     },
