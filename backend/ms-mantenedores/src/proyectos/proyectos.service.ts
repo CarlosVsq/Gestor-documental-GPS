@@ -104,9 +104,12 @@ export class ProyectosService {
         return this.findOne(id);
     }
 
-    async remove(id: number): Promise<void> {
+    async toggle(id: number): Promise<{ activo: boolean }> {
         const proyecto = await this.findOne(id);
-        await this.proyectoRepository.softRemove(proyecto);
+        proyecto.activo = !proyecto.activo;
+        proyecto.actualizadoPor = 'admin';
+        await this.proyectoRepository.save(proyecto);
+        return { activo: proyecto.activo };
     }
 
     async getStats(contratistaId?: number): Promise<{ total: number; activos: number; inactivos: number }> {
