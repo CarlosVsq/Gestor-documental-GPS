@@ -111,20 +111,25 @@ export class AreasService {
         return this.findOne(id);
     }
 
-    async remove(id: number): Promise<void> {
+    async toggle(id: number): Promise<{ activo: boolean }> {
         const area = await this.findOne(id);
 
+        // Verificar proyectos asociados (activos o inactivos, incluyendo soft-deleted)
         const proyectosCount = await this.proyectoRepository.count({
             where: { areaId: id },
+            withDeleted: true,
         });
         if (proyectosCount > 0) {
             throw new RpcException({
                 statusCode: 409,
-                message: `No se puede eliminar el área "${area.nombre}": tiene ${proyectosCount} proyecto(s) asociado(s)`,
+                message: `No se puede desactivar el área "${area.nombre}": tiene ${proyectosCount} proyecto(s) asociado(s)`,
             });
         }
 
-        await this.areaRepository.softRemove(area);
+        area.activo = !area.activo;
+        area.actualizadoPor = 'admin';
+        await this.areaRepository.save(area);
+        return { activo: area.activo };
     }
 
     async getStats(contratistaId?: number): Promise<{ total: number; activas: number; inactivas: number }> {

@@ -16,7 +16,7 @@ export class ContratistasService {
   constructor(
     @InjectRepository(Contratista)
     private readonly contratistaRepository: Repository<Contratista>,
-  ) {}
+  ) { }
 
   /**
    * CA-1: Crear un nuevo contratista
@@ -85,11 +85,14 @@ export class ContratistasService {
   }
 
   /**
-   * CA-4: Eliminar un contratista (soft delete)
+   * CA-4: Desactivar/reactivar un contratista (toggle de estado)
    */
-  async remove(id: number): Promise<void> {
+  async toggle(id: number): Promise<{ activo: boolean }> {
     const contratista = await this.findOne(id);
-    await this.contratistaRepository.softRemove(contratista);
+    contratista.activo = !contratista.activo;
+    contratista.actualizadoPor = 'admin';
+    await this.contratistaRepository.save(contratista);
+    return { activo: contratista.activo };
   }
 
   /**

@@ -30,9 +30,9 @@ export class ProyectosController {
         return this.proyectosService.update(data.id, data.dto);
     }
 
-    @MessagePattern(PROYECTOS_PATTERNS.REMOVE)
-    async remove(@Payload() data: { id: number }) {
-        return this.proyectosService.remove(data.id);
+    @MessagePattern(PROYECTOS_PATTERNS.TOGGLE)
+    async toggle(@Payload() data: { id: number }) {
+        return this.proyectosService.toggle(data.id);
     }
 
     @MessagePattern(PROYECTOS_PATTERNS.STATS)

@@ -1,19 +1,23 @@
 import {
-  Controller, Get, Post, Put, Delete,
+  Controller, Get, Post, Put, Patch,
   Body, Param, Query, ParseIntPipe,
   HttpCode, HttpStatus, Inject, HttpException,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { SERVICE_NAMES, CONTRATISTAS_PATTERNS } from '../common/constants';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('contratistas')
 @Controller('contratistas')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class ContratistasGatewayController {
   constructor(
     @Inject(SERVICE_NAMES.MANTENEDORES) private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo contratista (CA-1)' })
@@ -79,15 +83,14 @@ export class ContratistasGatewayController {
     }
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar un contratista - soft delete (CA-4)' })
+  @Patch(':id/toggle')
+  @ApiOperation({ summary: 'Activar/desactivar un contratista (CA-4)' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 204, description: 'Contratista eliminado (soft delete)' })
+  @ApiResponse({ status: 200, description: 'Estado del contratista actualizado' })
   @ApiResponse({ status: 404, description: 'Contratista no encontrado' })
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  async toggle(@Param('id', ParseIntPipe) id: number) {
     try {
-      await firstValueFrom(this.client.send(CONTRATISTAS_PATTERNS.REMOVE, { id }));
+      return await firstValueFrom(this.client.send(CONTRATISTAS_PATTERNS.TOGGLE, { id }));
     } catch (error) {
       throw new HttpException(error.message, error.statusCode || 500);
     }

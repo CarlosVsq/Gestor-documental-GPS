@@ -166,14 +166,13 @@ function AppLayout() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este contratista?')) return;
+  const handleToggle = async (id: number) => {
     try {
-      await contratistasApi.delete(id);
-      showNotification('Contratista eliminado correctamente', 'success');
+      await contratistasApi.toggle(id);
+      showNotification('Estado del contratista actualizado', 'success');
       loadData();
     } catch (err: any) {
-      showNotification(err.message || 'Error al eliminar', 'error');
+      showNotification(err.message || 'Error al cambiar estado', 'error');
     }
   };
 
@@ -203,14 +202,13 @@ function AppLayout() {
     }
   };
 
-  const handleDeleteArea = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta área?')) return;
+  const handleToggleArea = async (id: number) => {
     try {
-      await areasApi.delete(id);
-      showNotification('Área eliminada correctamente', 'success');
+      await areasApi.toggle(id);
+      showNotification('Estado del área actualizado', 'success');
       loadAreasData();
     } catch (err: any) {
-      showNotification(err.message || 'Error al eliminar área', 'error');
+      showNotification(err.message || 'Error al cambiar estado del área', 'error');
     }
   };
 
@@ -239,14 +237,13 @@ function AppLayout() {
     }
   };
 
-  const handleDeleteProyecto = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este proyecto?')) return;
+  const handleToggleProyecto = async (id: number) => {
     try {
-      await proyectosApi.delete(id);
-      showNotification('Proyecto eliminado correctamente', 'success');
+      await proyectosApi.toggle(id);
+      showNotification('Estado del proyecto actualizado', 'success');
       loadProyectosData();
     } catch (err: any) {
-      showNotification(err.message || 'Error al eliminar proyecto', 'error');
+      showNotification(err.message || 'Error al cambiar estado del proyecto', 'error');
     }
   };
 
@@ -272,7 +269,7 @@ function AppLayout() {
               <div className="mini-stat"><span className="mini-stat-value active-val">{stats.activos}</span><span className="mini-stat-label">Activos</span></div>
               <div className="mini-stat"><span className="mini-stat-value inactive-val">{stats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
             </div>
-            <ContratistasTable contratistas={contratistas} total={total} onEdit={(c) => { setEditingContratista(c); setShowForm(true); }} onDelete={handleDelete} loading={loading} />
+            <ContratistasTable contratistas={contratistas} total={total} onEdit={(c) => { setEditingContratista(c); setShowForm(true); }} onToggle={handleToggle} loading={loading} />
             {showForm && (
               <div className="modal-overlay" onClick={() => { setEditingContratista(null); setShowForm(false); }}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -302,7 +299,7 @@ function AppLayout() {
               <div className="mini-stat"><span className="mini-stat-value active-val">{areasStats.activas}</span><span className="mini-stat-label">Activas</span></div>
               <div className="mini-stat"><span className="mini-stat-value inactive-val">{areasStats.inactivas}</span><span className="mini-stat-label">Inactivas</span></div>
             </div>
-            <AreasTable areas={areas} total={areasTotal} onEdit={(a) => { setEditingArea(a); setShowAreaForm(true); }} onDelete={handleDeleteArea} loading={areasLoading} />
+            <AreasTable areas={areas} total={areasTotal} onEdit={(a) => { setEditingArea(a); setShowAreaForm(true); }} onToggle={handleToggleArea} loading={areasLoading} />
             {showAreaForm && (
               <div className="modal-overlay" onClick={() => { setEditingArea(null); setShowAreaForm(false); }}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -333,7 +330,7 @@ function AppLayout() {
               <div className="mini-stat"><span className="mini-stat-value active-val">{proyectosStats.activos}</span><span className="mini-stat-label">Activos</span></div>
               <div className="mini-stat"><span className="mini-stat-value inactive-val">{proyectosStats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
             </div>
-            <ProyectosTable proyectos={proyectos} total={proyectosTotal} onEdit={(p) => { setEditingProyecto(p); setShowProyectoForm(true); }} onDelete={handleDeleteProyecto} loading={proyectosLoading} />
+            <ProyectosTable proyectos={proyectos} total={proyectosTotal} onEdit={(p) => { setEditingProyecto(p); setShowProyectoForm(true); }} onToggle={handleToggleProyecto} loading={proyectosLoading} />
             {showProyectoForm && (
               <div className="modal-overlay" onClick={() => { setEditingProyecto(null); setShowProyectoForm(false); }}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>

@@ -6,7 +6,7 @@ export const CONTRATISTAS_PATTERNS = {
   FIND_ALL: 'contratistas.findAll',
   FIND_ONE: 'contratistas.findOne',
   UPDATE: 'contratistas.update',
-  REMOVE: 'contratistas.remove',
+  TOGGLE: 'contratistas.toggle',
   STATS: 'contratistas.stats',
 } as const;
 
@@ -15,7 +15,7 @@ export const AREAS_PATTERNS = {
   FIND_ALL: 'areas.findAll',
   FIND_ONE: 'areas.findOne',
   UPDATE: 'areas.update',
-  REMOVE: 'areas.remove',
+  TOGGLE: 'areas.toggle',
   STATS: 'areas.stats',
 } as const;
 
@@ -24,6 +24,6 @@ export const PROYECTOS_PATTERNS = {
   FIND_ALL: 'proyectos.findAll',
   FIND_ONE: 'proyectos.findOne',
   UPDATE: 'proyectos.update',
-  REMOVE: 'proyectos.remove',
+  TOGGLE: 'proyectos.toggle',
   STATS: 'proyectos.stats',
 } as const;
