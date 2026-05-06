@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Put, Delete,
+  Controller, Get, Post, Put, Patch, Delete,
   Body, Param, Query, ParseIntPipe,
   HttpCode, HttpStatus, Inject, HttpException,
   UseGuards, Request,
@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class ProyectosGatewayController {
   constructor(
     @Inject(SERVICE_NAMES.MANTENEDORES) private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo proyecto vinculado a un área (HU-03)' })
@@ -39,10 +39,10 @@ export class ProyectosGatewayController {
   async findAll(@Query('page') page?: string, @Query('limit') limit?: string, @Request() req?: any) {
     const p = Number(page) || 1;
     const l = Number(limit) || 10;
-    
+
     // Si es contratista, inyectar el contratistaId como filtro
     const filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
-    
+
     try {
       return await firstValueFrom(this.client.send(PROYECTOS_PATTERNS.FIND_ALL, { page: p, limit: l, contratistaId: filterContratistaId }));
     } catch (error) {
@@ -88,14 +88,13 @@ export class ProyectosGatewayController {
     }
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar un proyecto - soft delete (HU-03)' })
+  @Patch(':id/toggle')
+  @ApiOperation({ summary: 'Activar/desactivar un proyecto (HU-03)' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 204, description: 'Proyecto eliminado (soft delete)' })
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  @ApiResponse({ status: 200, description: 'Estado del proyecto actualizado' })
+  async toggle(@Param('id', ParseIntPipe) id: number) {
     try {
-      await firstValueFrom(this.client.send(PROYECTOS_PATTERNS.REMOVE, { id }));
+      return await firstValueFrom(this.client.send(PROYECTOS_PATTERNS.TOGGLE, { id }));
     } catch (error) {
       throw new HttpException(error.message, error.statusCode || 500);
     }
