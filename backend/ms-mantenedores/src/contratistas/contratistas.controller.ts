@@ -8,7 +8,7 @@ import { CONTRATISTAS_PATTERNS } from '../common/constants';
  */
 @Controller()
 export class ContratistasController {
-  constructor(private readonly contratistasService: ContratistasService) {}
+  constructor(private readonly contratistasService: ContratistasService) { }
 
   @MessagePattern(CONTRATISTAS_PATTERNS.CREATE)
   async create(@Payload() createDto: any) {
@@ -30,9 +30,9 @@ export class ContratistasController {
     return this.contratistasService.update(data.id, data.dto);
   }
 
-  @MessagePattern(CONTRATISTAS_PATTERNS.REMOVE)
-  async remove(@Payload() data: { id: number }) {
-    return this.contratistasService.remove(data.id);
+  @MessagePattern(CONTRATISTAS_PATTERNS.TOGGLE)
+  async toggle(@Payload() data: { id: number }) {
+    return this.contratistasService.toggle(data.id);
   }
 
   @MessagePattern(CONTRATISTAS_PATTERNS.STATS)
