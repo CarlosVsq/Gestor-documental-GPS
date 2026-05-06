@@ -4,11 +4,11 @@ interface AreasTableProps {
     areas: Area[];
     total: number;
     onEdit: (area: Area) => void;
-    onDelete: (id: number) => void;
+    onToggle: (id: number, activo: boolean) => void;
     loading?: boolean;
 }
 
-export default function AreasTable({ areas, total, onEdit, onDelete, loading }: AreasTableProps) {
+export default function AreasTable({ areas, total, onEdit, onToggle, loading }: AreasTableProps) {
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('es-CL', {
             day: '2-digit', month: 'short', year: 'numeric',
@@ -91,8 +91,16 @@ export default function AreasTable({ areas, total, onEdit, onDelete, loading }: 
                                             <button className="action-btn action-edit" onClick={() => onEdit(a)} title="Editar">
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                                             </button>
-                                            <button className="action-btn action-delete" onClick={() => onDelete(a.id)} title="Eliminar">
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                                            <button
+                                                className={`action-btn ${a.activo ? 'action-delete' : 'action-edit'}`}
+                                                onClick={() => onToggle(a.id, a.activo)}
+                                                title={a.activo ? 'Desactivar área' : 'Activar área'}
+                                            >
+                                                {a.activo ? (
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="10" y1="15" x2="10" y2="9" /><line x1="14" y1="15" x2="14" y2="9" /></svg>
+                                                ) : (
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>
+                                                )}
                                             </button>
                                         </div>
                                     </td>
