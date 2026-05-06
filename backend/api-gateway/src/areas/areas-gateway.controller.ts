@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Put, Delete,
+  Controller, Get, Post, Put, Patch, Delete,
   Body, Param, Query, ParseIntPipe,
   HttpCode, HttpStatus, Inject, HttpException,
   UseGuards, Request,
@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class AreasGatewayController {
   constructor(
     @Inject(SERVICE_NAMES.MANTENEDORES) private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva área vinculada a un contratista (HU-02)' })
@@ -40,10 +40,10 @@ export class AreasGatewayController {
   async findAll(@Query('page') page?: string, @Query('limit') limit?: string, @Request() req?: any) {
     const p = Number(page) || 1;
     const l = Number(limit) || 10;
-    
+
     // Si es contratista, inyectar el contratistaId como filtro
     const filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
-    
+
     try {
       return await firstValueFrom(this.client.send(AREAS_PATTERNS.FIND_ALL, { page: p, limit: l, contratistaId: filterContratistaId }));
     } catch (error) {
@@ -89,15 +89,14 @@ export class AreasGatewayController {
     }
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar un área - soft delete (HU-02)' })
+  @Patch(':id/toggle')
+  @ApiOperation({ summary: 'Activar/desactivar un área (HU-02)' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 204, description: 'Área eliminada (soft delete)' })
-  @ApiResponse({ status: 409, description: 'No se puede eliminar: tiene proyectos asociados' })
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  @ApiResponse({ status: 200, description: 'Estado del área actualizado' })
+  @ApiResponse({ status: 409, description: 'No se puede desactivar: tiene proyectos asociados' })
+  async toggle(@Param('id', ParseIntPipe) id: number) {
     try {
-      await firstValueFrom(this.client.send(AREAS_PATTERNS.REMOVE, { id }));
+      return await firstValueFrom(this.client.send(AREAS_PATTERNS.TOGGLE, { id }));
     } catch (error) {
       throw new HttpException(error.message, error.statusCode || 500);
     }
