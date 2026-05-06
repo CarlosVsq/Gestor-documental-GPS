@@ -30,9 +30,9 @@ export class AreasController {
         return this.areasService.update(data.id, data.dto);
     }
 
-    @MessagePattern(AREAS_PATTERNS.REMOVE)
-    async remove(@Payload() data: { id: number }) {
-        return this.areasService.remove(data.id);
+    @MessagePattern(AREAS_PATTERNS.TOGGLE)
+    async toggle(@Payload() data: { id: number }) {
+        return this.areasService.toggle(data.id);
     }
 
     @MessagePattern(AREAS_PATTERNS.STATS)
