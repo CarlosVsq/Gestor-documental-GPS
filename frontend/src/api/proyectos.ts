@@ -90,15 +90,16 @@ export const proyectosApi = {
         return res.json();
     },
 
-    async delete(id: number): Promise<void> {
-        const res = await fetch(`${API_BASE}/${id}`, {
-            method: 'DELETE',
+    async toggle(id: number): Promise<{ activo: boolean }> {
+        const res = await fetch(`${API_BASE}/${id}/toggle`, {
+            method: 'PATCH',
             headers: authHeaders(),
         });
         if (!res.ok) {
             const err = await res.json();
-            throw new Error(err.message || 'Error al eliminar proyecto');
+            throw new Error(err.message || 'Error al cambiar estado del proyecto');
         }
+        return res.json();
     },
 
     async getStats(): Promise<ProyectoStats> {
