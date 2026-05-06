@@ -81,12 +81,13 @@ export const contratistasApi = {
     return res.json();
   },
 
-  async delete(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE}/${id}`, {
-      method: 'DELETE',
+  async toggle(id: number): Promise<{ activo: boolean }> {
+    const res = await fetch(`${API_BASE}/${id}/toggle`, {
+      method: 'PATCH',
       headers: authHeaders(),
     });
-    if (!res.ok) throw new Error('Error al eliminar contratista');
+    if (!res.ok) throw new Error('Error al cambiar estado del contratista');
+    return res.json();
   },
 
   async getStats(): Promise<ContratistaStats> {
