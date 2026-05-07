@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentosController } from './documentos.controller';
 import { DocumentosService } from './documentos.service';
 import { Documento } from './entities/documento.entity';
+import { RequerimientosModule } from './requerimientos/requerimientos.module';
 
 const isProduction = !!process.env.DB_HOST;
 
@@ -28,6 +29,7 @@ const isProduction = !!process.env.DB_HOST;
           },
     ),
     TypeOrmModule.forFeature([Documento]),
+    RequerimientosModule,
   ],
   controllers: [DocumentosController],
   providers: [DocumentosService],
