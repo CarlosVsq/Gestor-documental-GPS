@@ -107,17 +107,22 @@ cd frontend && npm run dev
 - **HU-01: CRUD de Contratistas**
 - **HU-02: CRUD de Áreas**
 - **HU-03: CRUD de Proyectos**
-- **HU-05: Integridad Jerárquica**
-- **HU-06: Carga de Documentos**
-- **HU-18: Login de Usuarios**
-- **HU-19: Gestión de Usuarios internos**
-- **HU-25: Control de Visibilidad por Contratista**
+- **HU-04: CRUD de Categorias**
+- **HU-05: CRUD de Subtipos**
+- **HU-06: Integridad Jerárquica**
+- **HU-07: Carga de Documentos**
+- **HU-14: Requerimientos cambian de estado.**
+- **HU-15: Bandeja de tareas con requerimientos pendientes.** (Verificar posteriormente con el frontend final)
+- **HU-25: Login de Usuarios**
+- **HU-26: Gestión de Usuarios internos**
+- **HU-28: Colaborador con formulario de requerimiento con campos predefinidos.** (Verificar posteriormente con el frontend final)
 
 - **HU-N1: Crear Requerimiento**
 - **HU-N2: Clasificar Requerimiento mediante Categoría y Subtipo**
-- **HU-14: Requerimientos cambian de estado.**
-- **HU-15: Bandeja de tareas con requerimientos pendientes.** (Verificar posteriormente con el frontend final)
-- **HU-28: Colaborador con formulario de requerimiento con campos predefinidos.** (Verificar posteriormente con el frontend final)
+- **HU-N3: Control de Visibilidad por Contratista**
+
+
+
 
   
 ## Equipo
