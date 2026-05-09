@@ -30,8 +30,16 @@ import { SERVICE_NAMES } from './constants';
           port: parseInt(process.env.DOCUMENTOS_SERVICE_PORT, 10) || 3003,
         },
       },
+      {
+        name: SERVICE_NAMES.REQUERIMIENTOS,
+        transport: Transport.TCP,
+        options: {
+          host: process.env.REQUERIMIENTOS_SERVICE_HOST || 'ms-requerimientos',
+          port: parseInt(process.env.REQUERIMIENTOS_SERVICE_PORT, 10) || 3004,
+        },
+      },
     ]),
   ],
   exports: [ClientsModule],
 })
-export class TcpClientsModule {}
+export class TcpClientsModule { }
