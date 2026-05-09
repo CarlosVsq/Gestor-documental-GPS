@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { CreateRequerimientoDto } from '../api/requerimientos';
+import { PrioridadRequerimiento } from '../api/requerimientos';
 
 interface RequerimientoFormProps {
     onSubmit: (data: CreateRequerimientoDto) => void;
@@ -20,6 +21,8 @@ export default function RequerimientoForm({ onSubmit, onCancel, proyectos, areas
         proyectoId: 0,
         categoriaId: 0,
         subtipoId: 0,
+        prioridad: PrioridadRequerimiento.MEDIA,
+        fechaVencimiento: '',
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -31,7 +34,7 @@ export default function RequerimientoForm({ onSubmit, onCancel, proyectos, areas
         if (!formData.proyectoId) newErrors.proyectoId = 'Requerido';
         if (!formData.categoriaId) newErrors.categoriaId = 'Requerido';
         if (!formData.subtipoId) newErrors.subtipoId = 'Requerido';
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -68,6 +71,23 @@ export default function RequerimientoForm({ onSubmit, onCancel, proyectos, areas
                 <div className="field-group">
                     <label>Descripción</label>
                     <textarea value={formData.descripcion} onChange={e => handleChange('descripcion', e.target.value)} rows={3} />
+                </div>
+
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="field-group">
+                        <label>Prioridad</label>
+                        <select className="field-select" value={formData.prioridad} onChange={e => handleChange('prioridad', e.target.value as PrioridadRequerimiento)}>
+                            <option value={PrioridadRequerimiento.BAJA}>Baja</option>
+                            <option value={PrioridadRequerimiento.MEDIA}>Media</option>
+                            <option value={PrioridadRequerimiento.ALTA}>Alta</option>
+                            <option value={PrioridadRequerimiento.CRITICA}>Crítica</option>
+                        </select>
+                    </div>
+
+                    <div className="field-group">
+                        <label>Fecha de Vencimiento (Opcional)</label>
+                        <input type="date" value={formData.fechaVencimiento || ''} onChange={e => handleChange('fechaVencimiento', e.target.value)} />
+                    </div>
                 </div>
 
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
