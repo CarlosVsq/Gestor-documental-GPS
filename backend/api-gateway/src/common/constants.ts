@@ -15,6 +15,7 @@ export const SERVICE_NAMES = {
   AUTH: 'AUTH_SERVICE',
   MANTENEDORES: 'MANTENEDORES_SERVICE',
   DOCUMENTOS: 'DOCUMENTOS_SERVICE',
+  REQUERIMIENTOS: 'REQUERIMIENTOS_SERVICE',
 } as const;
 
 export const AUTH_PATTERNS = {
@@ -60,4 +61,27 @@ export const DOCUMENTOS_PATTERNS = {
   CREATE: 'documentos.create',
   FIND_ALL: 'documentos.findAll',
   GET_FILE_PATH: 'documentos.getFilePath',
+} as const;
+
+export const CATEGORIAS_PATTERNS = {
+  CREATE: 'categorias.create',
+  FIND_ALL: 'categorias.findAll',
+  FIND_ONE: 'categorias.findOne',
+  UPDATE: 'categorias.update',
+  TOGGLE: 'categorias.toggle',
+} as const;
+
+export const SUBTIPOS_PATTERNS = {
+  CREATE: 'subtipos.create',
+  FIND_ALL: 'subtipos.findAll',
+  FIND_ONE: 'subtipos.findOne',
+  UPDATE: 'subtipos.update',
+  TOGGLE: 'subtipos.toggle',
+} as const;
+
+export const REQUERIMIENTOS_PATTERNS = {
+  CREATE: 'requerimientos.create',
+  FIND_ALL: 'requerimientos.findAll',
+  FIND_ONE: 'requerimientos.findOne',
+  UPDATE_STATE: 'requerimientos.updateState',
 } as const;

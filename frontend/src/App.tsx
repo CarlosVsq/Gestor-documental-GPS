@@ -12,6 +12,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
 import DocumentosPage from './pages/DocumentosPage';
+import CategoriasPage from './pages/CategoriasPage';
+import SubtiposPage from './pages/SubtiposPage';
+import RequerimientosPage from './pages/RequerimientosPage';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
@@ -20,7 +23,7 @@ import type { Area, CreateAreaDto, AreaStats } from './api/areas';
 import { proyectosApi } from './api/proyectos';
 import type { Proyecto, CreateProyectoDto, ProyectoStats } from './api/proyectos';
 
-export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'requerimientos' | 'documentos' | 'reportes' | 'usuarios';
+export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'categorias' | 'subtipos' | 'requerimientos' | 'documentos' | 'reportes' | 'usuarios';
 
 // ============================================================
 // Helpers reutilizables
@@ -42,6 +45,8 @@ const getPageHeaderInfo = (page: ActivePage) => {
     case 'contratistas': return { title: 'Contratistas', desc: 'Gestiona los contratistas registrados en el sistema' };
     case 'areas': return { title: 'Áreas', desc: 'Gestiona las áreas registradas en el sistema' };
     case 'proyectos': return { title: 'Proyectos', desc: 'Gestiona los proyectos vinculados a áreas y contratistas' };
+    case 'categorias': return { title: 'Categorías', desc: 'Gestiona la taxonomía documental principal' };
+    case 'subtipos': return { title: 'Subtipos', desc: 'Gestiona los subtipos documentales por categoría' };
     case 'usuarios': return { title: 'Administración de Usuarios', desc: 'Gestión de accesos y roles del Sistema de Gestión Documental' };
     case 'documentos': return { title: 'Documentos', desc: 'Sube y centraliza la documentación técnica de las obras' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
@@ -349,6 +354,15 @@ function AppLayout() {
 
       case 'usuarios':
         return <UsersPage onNotify={showNotification} />;
+
+      case 'categorias':
+        return <CategoriasPage onNotify={showNotification} />;
+
+      case 'subtipos':
+        return <SubtiposPage onNotify={showNotification} />;
+
+      case 'requerimientos':
+        return <RequerimientosPage onNotify={showNotification} />;
 
       case 'documentos':
         return <DocumentosPage onNotify={showNotification} />;

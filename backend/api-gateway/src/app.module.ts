@@ -13,6 +13,9 @@ import { ProyectosGatewayModule } from './proyectos/proyectos-gateway.module';
 import { DocumentosGatewayModule } from './documentos/documentos-gateway.module';
 
 import { TcpClientsModule } from './common/tcp-clients.module';
+import { CategoriasGatewayModule } from './categorias/categorias-gateway.module';
+import { SubtiposGatewayModule } from './subtipos/subtipos-gateway.module';
+import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gateway.module';
 
 @Module({
   imports: [
@@ -40,6 +43,9 @@ import { TcpClientsModule } from './common/tcp-clients.module';
     AreasGatewayModule,
     ProyectosGatewayModule,
     DocumentosGatewayModule,
+    CategoriasGatewayModule,
+    SubtiposGatewayModule,
+    RequerimientosGatewayModule,
   ],
 })
 export class AppModule {}

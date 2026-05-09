@@ -791,7 +791,8 @@ tbody tr:last-child td { border-bottom: none; }
 .required { color: var(--red-500); }
 .optional { font-weight: 400; color: var(--gray-400); font-size: 0.76rem; }
 
-.field-group input {
+.field-group input,
+.field-group textarea {
   width: 100%;
   padding: 10px 14px;
   background: white;
@@ -804,16 +805,21 @@ tbody tr:last-child td { border-bottom: none; }
   outline: none;
 }
 
-.field-group input:focus {
+.field-group input:focus,
+.field-group textarea:focus {
   border-color: var(--accent-500);
   box-shadow: 0 0 0 3px rgba(54, 211, 153, 0.12);
 }
 
-.field-group input:disabled { background: var(--gray-50); color: var(--gray-400); cursor: not-allowed; }
-.field-group input::placeholder { color: var(--gray-400); }
+.field-group input:disabled,
+.field-group textarea:disabled { background: var(--gray-50); color: var(--gray-400); cursor: not-allowed; }
+.field-group input::placeholder,
+.field-group textarea::placeholder { color: var(--gray-400); }
 
-.has-error input { border-color: var(--red-500); }
-.has-error input:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
+.has-error input,
+.has-error textarea { border-color: var(--red-500); }
+.has-error input:focus,
+.has-error textarea:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
 
 .field-error {
   display: block;

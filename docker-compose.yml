@@ -102,6 +102,27 @@ services:
     networks:
       - sgd-network
 
+  # --- Microservicio de Requerimientos (TCP :3004) ---
+  ms-requerimientos:
+    build:
+      context: ./backend
+      dockerfile: ms-requerimientos/Dockerfile
+      network: host
+    container_name: sgd-ms-requerimientos
+    env_file:
+      - .env
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sgd-network
+
   # --- API Gateway (HTTP :3000, punto de entrada único) ---
   api-gateway:
     build:
@@ -121,6 +142,8 @@ services:
       MANTENEDORES_SERVICE_PORT: 3002
       DOCUMENTOS_SERVICE_HOST: ms-documentos
       DOCUMENTOS_SERVICE_PORT: 3003
+      REQUERIMIENTOS_SERVICE_HOST: ms-requerimientos
+      REQUERIMIENTOS_SERVICE_PORT: 3004
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     volumes:
@@ -129,6 +152,7 @@ services:
       - ms-auth
       - ms-mantenedores
       - ms-documentos
+      - ms-requerimientos
       - redis
     networks:
       - sgd-network

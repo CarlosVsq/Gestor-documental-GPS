@@ -27,3 +27,19 @@ export const PROYECTOS_PATTERNS = {
   TOGGLE: 'proyectos.toggle',
   STATS: 'proyectos.stats',
 } as const;
+
+export const CATEGORIAS_PATTERNS = {
+  CREATE: 'categorias.create',
+  FIND_ALL: 'categorias.findAll',
+  FIND_ONE: 'categorias.findOne',
+  UPDATE: 'categorias.update',
+  TOGGLE: 'categorias.toggle',
+} as const;
+
+export const SUBTIPOS_PATTERNS = {
+  CREATE: 'subtipos.create',
+  FIND_ALL: 'subtipos.findAll',
+  FIND_ONE: 'subtipos.findOne',
+  UPDATE: 'subtipos.update',
+  TOGGLE: 'subtipos.toggle',
+} as const;
