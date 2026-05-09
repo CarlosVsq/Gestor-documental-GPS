@@ -15,17 +15,19 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiBearerAuth()
 export class RequerimientosGatewayController {
   constructor(
-    @Inject(SERVICE_NAMES.DOCUMENTOS) private readonly client: ClientProxy,
+    @Inject(SERVICE_NAMES.REQUERIMIENTOS) private readonly client: ClientProxy,
   ) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo Requerimiento (Ticket)' })
   async create(@Body() createDto: any, @Request() req: any) {
     try {
-      // API Composition: Idealmente, aquí validaríamos con ms-mantenedores 
-      // si proyectoId, areaId, contratistaId, categoriaId, subtipoId existen.
-      // Lo dejamos simple por tiempo.
-      return await firstValueFrom(this.client.send(REQUERIMIENTOS_PATTERNS.CREATE, createDto));
+      // Inyectar usuarioCreadorId desde el token JWT
+      const dtoWithUser = {
+        ...createDto,
+        usuarioCreadorId: req.user.id
+      };
+      return await firstValueFrom(this.client.send(REQUERIMIENTOS_PATTERNS.CREATE, dtoWithUser));
     } catch (error) {
       throw new HttpException(error.message, error.statusCode || 500);
     }
@@ -33,15 +35,31 @@ export class RequerimientosGatewayController {
 
   @Get()
   @ApiOperation({ summary: 'Listar Requerimientos' })
-  async findAll(@Query('page') page?: string, @Query('limit') limit?: string, @Request() req?: any) {
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('estado') estado?: string,
+    @Query('prioridad') prioridad?: string,
+    @Query('proyectoId') proyectoId?: string,
+    @Query('areaId') areaId?: string,
+    @Request() req?: any
+  ) {
     const p = Number(page) || 1;
     const l = Number(limit) || 10;
-    
+
     // Filtro por contratista si el rol lo requiere (HU-25 / HU-N3)
-    const filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
-    
+    let filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
+
+    const filtros = {
+      contratistaId: filterContratistaId,
+      estado,
+      prioridad,
+      proyectoId: proyectoId ? Number(proyectoId) : undefined,
+      areaId: areaId ? Number(areaId) : undefined,
+    };
+
     try {
-      return await firstValueFrom(this.client.send(REQUERIMIENTOS_PATTERNS.FIND_ALL, { page: p, limit: l, contratistaId: filterContratistaId }));
+      return await firstValueFrom(this.client.send(REQUERIMIENTOS_PATTERNS.FIND_ALL, { page: p, limit: l, filtros }));
     } catch (error) {
       throw new HttpException(error.message, error.statusCode || 500);
     }
