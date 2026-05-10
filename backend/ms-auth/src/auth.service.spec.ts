@@ -151,7 +151,7 @@ describe('AuthService', () => {
     it('debería retornar todos los usuarios sin contraseña', async () => {
       const users = [
         { id: 1, nombre: 'Admin', email: 'admin@sgd.cl', password: 'hash1', rol: 'admin' },
-        { id: 2, nombre: 'Editor', email: 'editor@sgd.cl', password: 'hash2', rol: 'editor' },
+        { id: 2, nombre: 'Colaborador', email: 'colaborador@sgd.cl', password: 'hash2', rol: 'colaborador' },
       ];
       mockUserRepository.find.mockResolvedValue(users);
 
@@ -174,7 +174,7 @@ describe('AuthService', () => {
         nombre: 'Test',
         email: 'test@sgd.cl',
         password: 'hash',
-        rol: 'editor',
+        rol: 'colaborador',
       });
 
       const result = await service.findOne(1);
@@ -198,7 +198,7 @@ describe('AuthService', () => {
       nombre: 'Nuevo Usuario',
       email: 'nuevo@sgd.cl',
       password: 'password123',
-      rol: 'editor',
+      rol: 'colaborador',
     };
 
     it('debería crear un usuario exitosamente', async () => {
@@ -241,7 +241,7 @@ describe('AuthService', () => {
         email: 'test@sgd.cl',
         password: 'hash',
         activo: true,
-        rol: 'editor',
+        rol: 'colaborador',
       };
       mockUserRepository.findOne.mockResolvedValue({ ...user });
       mockUserRepository.save.mockResolvedValue({ ...user, activo: false });
