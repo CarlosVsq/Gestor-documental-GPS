@@ -116,6 +116,7 @@ describe('AreasService', () => {
                 skip: 0,
                 take: 10,
                 order: { creadoEn: 'DESC' },
+                where: {},
             });
         });
     });
@@ -136,26 +137,30 @@ describe('AreasService', () => {
         });
     });
 
-    describe('remove', () => {
-        it('debería hacer soft delete si no tiene proyectos asociados', async () => {
-            const area = { id: 1, nombre: 'Área Test', contratistaId: 1 };
+    describe('toggle', () => {
+        it('debería cambiar el estado activo si no tiene proyectos asociados', async () => {
+            const area = { id: 1, nombre: 'Área Test', contratistaId: 1, activo: true };
             mockAreaRepository.findOne.mockResolvedValue(area);
             mockProyectoRepository.count.mockResolvedValue(0);
-            mockAreaRepository.softRemove.mockResolvedValue(area);
+            mockAreaRepository.save.mockResolvedValue({ ...area, activo: false });
 
-            await service.remove(1);
+            const result = await service.toggle(1);
 
-            expect(mockProyectoRepository.count).toHaveBeenCalledWith({ where: { areaId: 1 } });
-            expect(mockAreaRepository.softRemove).toHaveBeenCalledWith(area);
+            expect(mockProyectoRepository.count).toHaveBeenCalledWith({
+                where: { areaId: 1 },
+                withDeleted: true,
+            });
+            expect(mockAreaRepository.save).toHaveBeenCalled();
+            expect(result).toEqual({ activo: false });
         });
 
         it('debería lanzar RpcException si tiene proyectos asociados', async () => {
-            const area = { id: 1, nombre: 'Área Test', contratistaId: 1 };
+            const area = { id: 1, nombre: 'Área Test', contratistaId: 1, activo: true };
             mockAreaRepository.findOne.mockResolvedValue(area);
             mockProyectoRepository.count.mockResolvedValue(3);
 
-            await expect(service.remove(1)).rejects.toThrow(RpcException);
-            expect(mockAreaRepository.softRemove).not.toHaveBeenCalled();
+            await expect(service.toggle(1)).rejects.toThrow(RpcException);
+            expect(mockAreaRepository.save).not.toHaveBeenCalled();
         });
     });
 

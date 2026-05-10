@@ -194,6 +194,7 @@ describe('ProyectosService', () => {
                 skip: 0,
                 take: 10,
                 order: { creadoEn: 'DESC' },
+                where: {},
             });
         });
 
@@ -295,21 +296,22 @@ describe('ProyectosService', () => {
     // ================================================================
     // REMOVE (soft delete)
     // ================================================================
-    describe('remove', () => {
-        it('debería hacer soft delete del proyecto', async () => {
-            const proyecto = { id: 1, nombre: 'Proyecto Test', codigo: 'ING-001' };
+    describe('toggle', () => {
+        it('debería cambiar el estado activo del proyecto', async () => {
+            const proyecto = { id: 1, nombre: 'Proyecto Test', codigo: 'ING-001', activo: true, actualizadoPor: 'admin' };
             mockProyectoRepository.findOne.mockResolvedValue(proyecto);
-            mockProyectoRepository.softRemove.mockResolvedValue(proyecto);
+            mockProyectoRepository.save.mockResolvedValue({ ...proyecto, activo: false });
 
-            await service.remove(1);
+            const result = await service.toggle(1);
 
-            expect(mockProyectoRepository.softRemove).toHaveBeenCalledWith(proyecto);
+            expect(mockProyectoRepository.save).toHaveBeenCalled();
+            expect(result).toEqual({ activo: false });
         });
 
         it('debería lanzar RpcException si el proyecto no existe', async () => {
             mockProyectoRepository.findOne.mockResolvedValue(null);
 
-            await expect(service.remove(999)).rejects.toThrow(RpcException);
+            await expect(service.toggle(999)).rejects.toThrow(RpcException);
         });
     });
 

@@ -110,15 +110,16 @@ describe('ContratistasService', () => {
     });
   });
 
-  describe('remove', () => {
-    it('CA-4: debería hacer soft delete de un contratista', async () => {
-      const contratista = { id: 1, nombre: 'Test', rut: '76.111.111-1' };
+  describe('toggle', () => {
+    it('CA-4: debería cambiar el estado activo de un contratista', async () => {
+      const contratista = { id: 1, nombre: 'Test', rut: '76.111.111-1', activo: true, actualizadoPor: 'admin' };
       mockRepository.findOne.mockResolvedValue(contratista);
-      mockRepository.softRemove.mockResolvedValue(contratista);
+      mockRepository.save.mockResolvedValue({ ...contratista, activo: false });
 
-      await service.remove(1);
+      const result = await service.toggle(1);
 
-      expect(mockRepository.softRemove).toHaveBeenCalledWith(contratista);
+      expect(mockRepository.save).toHaveBeenCalled();
+      expect(result).toEqual({ activo: false });
     });
   });
 
