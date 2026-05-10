@@ -4,11 +4,11 @@ interface ContratistasTableProps {
   contratistas: Contratista[];
   total: number;
   onEdit: (contratista: Contratista) => void;
-  onDelete: (id: number) => void;
+  onToggle: (id: number, activo: boolean) => void;
   loading?: boolean;
 }
 
-export default function ContratistasTable({ contratistas, total, onEdit, onDelete, loading }: ContratistasTableProps) {
+export default function ContratistasTable({ contratistas, total, onEdit, onToggle, loading }: ContratistasTableProps) {
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('es-CL', {
       day: '2-digit', month: 'short', year: 'numeric',
@@ -31,7 +31,7 @@ export default function ContratistasTable({ contratistas, total, onEdit, onDelet
       {/* Table Header */}
       <div className="table-toolbar">
         <div className="table-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
           <input type="text" placeholder="Buscar contratista..." className="search-input" />
         </div>
         <div className="table-filters">
@@ -42,7 +42,7 @@ export default function ContratistasTable({ contratistas, total, onEdit, onDelet
       {contratistas.length === 0 ? (
         <div className="empty-state">
           <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           <h3>No hay contratistas registrados</h3>
           <p>Haz clic en "Nuevo Contratista" para crear el primer registro</p>
@@ -58,7 +58,7 @@ export default function ContratistasTable({ contratistas, total, onEdit, onDelet
                 <th>Teléfono</th>
                 <th>Estado</th>
                 <th>Registrado</th>
-                <th style={{width: '100px'}}>Acciones</th>
+                <th style={{ width: '100px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -85,10 +85,20 @@ export default function ContratistasTable({ contratistas, total, onEdit, onDelet
                   <td>
                     <div className="row-actions">
                       <button className="action-btn action-edit" onClick={() => onEdit(c)} title="Editar">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                       </button>
-                      <button className="action-btn action-delete" onClick={() => onDelete(c.id)} title="Eliminar">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <button
+                        className={`action-btn ${c.activo ? 'action-delete' : 'action-edit'}`}
+                        onClick={() => onToggle(c.id, c.activo)}
+                        title={c.activo ? 'Desactivar' : 'Activar'}
+                      >
+                        {c.activo ? (
+                          /* Ícono de "eliminar/desactivar" (X en círculo) */
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                        ) : (
+                          /* Ícono de "play/activar" */
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>
+                        )}
                       </button>
                     </div>
                   </td>

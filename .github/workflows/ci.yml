@@ -2,43 +2,281 @@
 # SGD - Pipeline de Integración Continua
 # GitHub Actions Workflow
 # ============================================================
-# Se ejecuta en cada push y pull request a main:
-#   Job: Test → instala dependencias, ejecuta Jest con cobertura
+# Arquitectura de microservicios: detecta automáticamente qué
+# servicios fueron modificados (git diff) y ejecuta en paralelo
+# solo los jobs necesarios. No requiere cambios al agregar
+# nuevos microservicios — basta con que tengan Dockerfile y
+# package.json en backend/<nombre>/.
 # ============================================================
 
 name: SGD CI - Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, Testing ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
-    name: 🧪 Lint & Test
-    runs-on: ubuntu-latest
 
+  # ─────────────────────────────────────────────────────────
+  # Job 1: Detectar qué cambió (git diff)
+  # Salidas:
+  #   services     → JSON array de microservicios a testear
+  #   frontend     → "true" si el frontend tiene cambios
+  # ─────────────────────────────────────────────────────────
+  detect:
+    name: Detectar cambios
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.detect.outputs.services }}
+      frontend: ${{ steps.detect.outputs.frontend }}
     steps:
-      - name: 📥 Checkout código
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detectar servicios modificados
+        id: detect
+        run: |
+          # Determinar el SHA base según el tipo de evento
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+
+          # Primer push a la rama: no hay before SHA, comparar con HEAD~1
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)
+          else
+            CHANGED=$(git diff --name-only "$BASE" HEAD)
+          fi
+
+          echo "Archivos modificados:"
+          echo "$CHANGED"
+
+          # Detectar si el frontend cambió
+          FRONTEND="false"
+          echo "$CHANGED" | grep -q "^frontend/" && FRONTEND="true"
+
+          # Detectar microservicios modificados (solo dirs con Dockerfile + package.json)
+          SERVICES=$(echo "$CHANGED" \
+            | grep "^backend/" \
+            | cut -d'/' -f2 \
+            | sort -u \
+            | while read dir; do
+                if [ -n "$dir" ] && [ -f "backend/$dir/Dockerfile" ] && [ -f "backend/$dir/package.json" ]; then
+                  echo "$dir"
+                fi
+              done \
+            | jq -R -s -c 'split("\n")[:-1]')
+
+          [ -z "$SERVICES" ] && SERVICES="[]"
+
+          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+          echo "frontend=$FRONTEND"  >> $GITHUB_OUTPUT
+          echo "Servicios a testear: $SERVICES | Frontend: $FRONTEND"
+
+  # ─────────────────────────────────────────────────────────
+  # Job 2: Verificar que todos los microservicios están en
+  # docker-compose.yml (falla si falta alguno)
+  # ─────────────────────────────────────────────────────────
+  validate-compose:
+    name: Validar docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js 18
+      - name: Verificar microservicios en docker-compose.yml
+        run: |
+          MISSING=()
+          for dir in backend/*/; do
+            service=$(basename "$dir")
+            if [ -f "$dir/Dockerfile" ] && [ -f "$dir/package.json" ]; then
+              if ! grep -q "sgd-$service" docker-compose.yml; then
+                MISSING+=("$service")
+              fi
+            fi
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "ERROR: Los siguientes microservicios no están en docker-compose.yml:"
+            printf ' - %s\n' "${MISSING[@]}"
+            exit 1
+          fi
+          echo "Todos los microservicios están registrados en docker-compose.yml."
+
+  # ─────────────────────────────────────────────────────────
+  # Job 3: Validar microservicios (paralelo, uno por servicio)
+  # Se omite si no hubo cambios en backend/
+  # ─────────────────────────────────────────────────────────
+  backend:
+    name: ${{ matrix.service }}
+    needs: detect
+    if: ${{ needs.detect.outputs.services != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: 📦 Instalar dependencias backend
-        working-directory: ./backend
+      - name: Instalar dependencias
+        working-directory: ./backend/${{ matrix.service }}
         run: npm ci
 
-      - name: 🧪 Ejecutar tests (Jest)
-        working-directory: ./backend
-        run: npm run test -- --ci --coverage
+      - name: Build TypeScript
+        working-directory: ./backend/${{ matrix.service }}
+        run: npm run build
 
-      - name: 📊 Subir reporte de cobertura
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Tests
+        working-directory: ./backend/${{ matrix.service }}
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.test ? 0 : 1)"; then
+            RUNNER=$(node -e "try{const d=require('./node_modules/jest/package.json');console.log('jest')}catch(e){console.log('other')}" 2>/dev/null || echo "other")
+            if [ "$RUNNER" = "jest" ]; then
+              npm run test -- --ci --passWithNoTests
+            else
+              npm run test
+            fi
+          else
+            echo "Sin script de test definido, omitiendo."
+          fi
+
+  # ─────────────────────────────────────────────────────────
+  # Job 4: Validar frontend
+  # Se omite si no hubo cambios en frontend/
+  # ─────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend
+    needs: detect
+    if: ${{ needs.detect.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
         with:
-          name: coverage-report
-          path: backend/coverage/
+          node-version: '18'
+
+      - name: Instalar dependencias
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build TypeScript + Vite
+        working-directory: ./frontend
+        run: npm run build
+
+  # ─────────────────────────────────────────────────────────
+  # Job 5: Build y push microservicios a GHCR
+  # Solo en push a main y si los tests pasaron
+  # ─────────────────────────────────────────────────────────
+  build-backend:
+    name: Build y Push ${{ matrix.service }}
+    needs: [detect, backend]
+    if: |
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.detect.outputs.services != '[]' &&
+      needs.backend.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Login en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalizar nombre del repo (lowercase requerido por GHCR)
+        id: repo
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
+      - name: Metadata de la imagen
+        uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ steps.repo.outputs.name }}/${{ matrix.service }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build y Push a GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: backend/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+  # ─────────────────────────────────────────────────────────
+  # Job 6: Build y push frontend a GHCR
+  # Solo en push a main y si los tests pasaron
+  # ─────────────────────────────────────────────────────────
+  build-frontend:
+    name: Build y Push Frontend
+    needs: [detect, frontend]
+    if: |
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.detect.outputs.frontend == 'true' &&
+      needs.frontend.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Login en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalizar nombre del repo (lowercase requerido por GHCR)
+        id: repo
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
+      - name: Metadata de la imagen
+        uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ steps.repo.outputs.name }}/frontend
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build y Push a GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}

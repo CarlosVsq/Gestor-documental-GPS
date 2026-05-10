@@ -20,6 +20,9 @@ jobs:
   deploy:
     name: Deploy al Servidor
     runs-on: self-hosted
+    permissions:
+      packages: read
+      contents: read
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
@@ -30,9 +33,29 @@ jobs:
         run: |
           cp ~/sgd-config/.env .env
 
+      - name: Login en GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull de imágenes actualizadas
+        run: |
+          docker-compose pull
+
       - name: Levantar servicios con Docker Compose
         run: |
-          docker-compose -f docker-compose.yml up -d --build
+          docker-compose up -d --remove-orphans
+
+      - name: Verificar salud de los servicios
+        run: |
+          sleep 15
+          UNHEALTHY=$(docker-compose ps | grep -E "Exit|unhealthy" | awk '{print $1}')
+          if [ -n "$UNHEALTHY" ]; then
+            echo "Servicios no saludables:"
+            echo "$UNHEALTHY"
+            docker-compose logs $UNHEALTHY
+            exit 1
+          fi
+          echo "Todos los servicios están saludables."
 
       - name: Limpiar imágenes sin usar
         run: |
@@ -42,6 +65,4 @@ jobs:
         run: |
           echo "## Deploy completado" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Servicio | Estado |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          docker-compose ps --format "| {{.Name}} | {{.Status}} |" >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "| - | Ver logs del runner |" >> $GITHUB_STEP_SUMMARY
+          docker-compose ps >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Ver logs del runner" >> $GITHUB_STEP_SUMMARY

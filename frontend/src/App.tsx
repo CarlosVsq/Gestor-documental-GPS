@@ -1,18 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ContratistaForm from './components/ContratistaForm';
 import ContratistasTable from './components/ContratistasTable';
+import AreasTable from './components/AreasTable';
+import AreaForm from './components/AreaForm';
+import ProyectosTable from './components/ProyectosTable';
+import ProyectoForm from './components/ProyectoForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
 import DocumentosPage from './pages/DocumentosPage';
+import CategoriasPage from './pages/CategoriasPage';
+import SubtiposPage from './pages/SubtiposPage';
+import RequerimientosPage from './pages/RequerimientosPage';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
+import { areasApi } from './api/areas';
+import type { Area, CreateAreaDto, AreaStats } from './api/areas';
+import { proyectosApi } from './api/proyectos';
+import type { Proyecto, CreateProyectoDto, ProyectoStats } from './api/proyectos';
 
-export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'requerimientos' | 'documentos' | 'reportes' | 'usuarios';
+export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'categorias' | 'subtipos' | 'requerimientos' | 'documentos' | 'reportes' | 'usuarios';
 
 // ============================================================
 // Helpers reutilizables
@@ -21,7 +32,7 @@ const getInitials = (name: string) =>
   name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
 const getRoleLabel = (rol: string) => {
-  const roles: Record<string, string> = { admin: 'Administrador', supervisor: 'Supervisor', colaborador: 'Colaborador', lectura: 'Solo Lectura' };
+  const roles: Record<string, string> = { admin: 'Administrador', supervisor: 'Supervisor', colaborador: 'Colaborador', auditor: 'Auditor', gerente: 'Gerente', contratista: 'Contratista' };
   return roles[rol] || rol;
 };
 
@@ -32,7 +43,11 @@ const getPageHeaderInfo = (page: ActivePage) => {
   switch (page) {
     case 'dashboard': return { title: 'Dashboard', desc: 'Vista general del Sistema de Gestión Documental' };
     case 'contratistas': return { title: 'Contratistas', desc: 'Gestiona los contratistas registrados en el sistema' };
-    case 'usuarios': return { title: 'Usuarios', desc: 'Gestiona los usuarios con acceso al sistema' };
+    case 'areas': return { title: 'Áreas', desc: 'Gestiona las áreas registradas en el sistema' };
+    case 'proyectos': return { title: 'Proyectos', desc: 'Gestiona los proyectos vinculados a áreas y contratistas' };
+    case 'categorias': return { title: 'Categorías', desc: 'Gestiona la taxonomía documental principal' };
+    case 'subtipos': return { title: 'Subtipos', desc: 'Gestiona los subtipos documentales por categoría' };
+    case 'usuarios': return { title: 'Administración de Usuarios', desc: 'Gestión de accesos y roles del Sistema de Gestión Documental' };
     case 'documentos': return { title: 'Documentos', desc: 'Sube y centraliza la documentación técnica de las obras' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
   }
@@ -40,7 +55,9 @@ const getPageHeaderInfo = (page: ActivePage) => {
 
 function AppLayout() {
   const { user, logout } = useAuth();
-  const [activePage, setActivePage] = useState<ActivePage>('dashboard');
+  const location = useLocation();
+  const initialPage = (location.state?.initialPage as ActivePage) || 'dashboard';
+  const [activePage, setActivePage] = useState<ActivePage>(initialPage);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // --- Contratistas state (reutilizado en Dashboard y ContratistasPage) ---
@@ -52,6 +69,22 @@ function AppLayout() {
   const [showForm, setShowForm] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // --- Áreas state (HU-02) ---
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [areasTotal, setAreasTotal] = useState(0);
+  const [areasStats, setAreasStats] = useState<AreaStats>({ total: 0, activas: 0, inactivas: 0 });
+  const [areasLoading, setAreasLoading] = useState(true);
+  const [editingArea, setEditingArea] = useState<Area | null>(null);
+  const [showAreaForm, setShowAreaForm] = useState(false);
+
+  // --- Proyectos state (HU-03) ---
+  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+  const [proyectosTotal, setProyectosTotal] = useState(0);
+  const [proyectosStats, setProyectosStats] = useState<ProyectoStats>({ total: 0, activos: 0, inactivos: 0 });
+  const [proyectosLoading, setProyectosLoading] = useState(true);
+  const [editingProyecto, setEditingProyecto] = useState<Proyecto | null>(null);
+  const [showProyectoForm, setShowProyectoForm] = useState(false);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -75,7 +108,41 @@ function AppLayout() {
     }
   }, [showNotification]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const loadAreasData = useCallback(async () => {
+    try {
+      setAreasLoading(true);
+      const [response, statsData] = await Promise.all([
+        areasApi.getAll(1, 50),
+        areasApi.getStats(),
+      ]);
+      setAreas(response.data);
+      setAreasTotal(response.total);
+      setAreasStats(statsData);
+    } catch {
+      showNotification('Error al cargar áreas. ¿Está el backend corriendo en :3000?', 'error');
+    } finally {
+      setAreasLoading(false);
+    }
+  }, [showNotification]);
+
+  const loadProyectosData = useCallback(async () => {
+    try {
+      setProyectosLoading(true);
+      const [response, statsData] = await Promise.all([
+        proyectosApi.getAll(1, 50),
+        proyectosApi.getStats(),
+      ]);
+      setProyectos(response.data);
+      setProyectosTotal(response.total);
+      setProyectosStats(statsData);
+    } catch {
+      showNotification('Error al cargar proyectos. ¿Está el backend corriendo en :3000?', 'error');
+    } finally {
+      setProyectosLoading(false);
+    }
+  }, [showNotification]);
+
+  useEffect(() => { loadData(); loadAreasData(); loadProyectosData(); }, [loadData, loadAreasData, loadProyectosData]);
 
   // --- Contratistas handlers ---
   const handleCreate = async (data: CreateContratistaDto) => {
@@ -97,19 +164,91 @@ function AppLayout() {
       setEditingContratista(null);
       setShowForm(false);
       loadData();
+      loadAreasData();
+      loadProyectosData();
     } catch (err: any) {
       showNotification(err.message || 'Error al actualizar', 'error');
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este contratista?')) return;
+  const handleToggle = async (id: number) => {
     try {
-      await contratistasApi.delete(id);
-      showNotification('Contratista eliminado correctamente', 'success');
+      await contratistasApi.toggle(id);
+      showNotification('Estado del contratista actualizado', 'success');
       loadData();
     } catch (err: any) {
-      showNotification(err.message || 'Error al eliminar', 'error');
+      showNotification(err.message || 'Error al cambiar estado', 'error');
+    }
+  };
+
+  // --- Áreas handlers (HU-02) ---
+  const handleCreateArea = async (data: CreateAreaDto) => {
+    try {
+      await areasApi.create(data);
+      showNotification('Área creada exitosamente', 'success');
+      setShowAreaForm(false);
+      loadAreasData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al crear área', 'error');
+    }
+  };
+
+  const handleUpdateArea = async (data: CreateAreaDto) => {
+    if (!editingArea) return;
+    try {
+      await areasApi.update(editingArea.id, data);
+      showNotification('Área actualizada exitosamente', 'success');
+      setEditingArea(null);
+      setShowAreaForm(false);
+      loadAreasData();
+      loadProyectosData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al actualizar área', 'error');
+    }
+  };
+
+  const handleToggleArea = async (id: number) => {
+    try {
+      await areasApi.toggle(id);
+      showNotification('Estado del área actualizado', 'success');
+      loadAreasData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al cambiar estado del área', 'error');
+    }
+  };
+
+  // --- Proyectos handlers (HU-03) ---
+  const handleCreateProyecto = async (data: CreateProyectoDto) => {
+    try {
+      await proyectosApi.create(data);
+      showNotification('Proyecto creado exitosamente', 'success');
+      setShowProyectoForm(false);
+      loadProyectosData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al crear proyecto', 'error');
+    }
+  };
+
+  const handleUpdateProyecto = async (data: CreateProyectoDto) => {
+    if (!editingProyecto) return;
+    try {
+      await proyectosApi.update(editingProyecto.id, data);
+      showNotification('Proyecto actualizado exitosamente', 'success');
+      setEditingProyecto(null);
+      setShowProyectoForm(false);
+      loadProyectosData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al actualizar proyecto', 'error');
+    }
+  };
+
+  const handleToggleProyecto = async (id: number) => {
+    try {
+      await proyectosApi.toggle(id);
+      showNotification('Estado del proyecto actualizado', 'success');
+      loadProyectosData();
+    } catch (err: any) {
+      showNotification(err.message || 'Error al cambiar estado del proyecto', 'error');
     }
   };
 
@@ -119,7 +258,7 @@ function AppLayout() {
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':
-        return <Dashboard stats={stats} totalContratistas={total} onNavigate={setActivePage} />;
+        return <Dashboard stats={stats} totalContratistas={total} areasTotal={areasTotal} proyectosTotal={proyectosTotal} onNavigate={setActivePage} />;
 
       case 'contratistas':
         return (
@@ -135,7 +274,7 @@ function AppLayout() {
               <div className="mini-stat"><span className="mini-stat-value active-val">{stats.activos}</span><span className="mini-stat-label">Activos</span></div>
               <div className="mini-stat"><span className="mini-stat-value inactive-val">{stats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
             </div>
-            <ContratistasTable contratistas={contratistas} total={total} onEdit={(c) => { setEditingContratista(c); setShowForm(true); }} onDelete={handleDelete} loading={loading} />
+            <ContratistasTable contratistas={contratistas} total={total} onEdit={(c) => { setEditingContratista(c); setShowForm(true); }} onToggle={handleToggle} loading={loading} />
             {showForm && (
               <div className="modal-overlay" onClick={() => { setEditingContratista(null); setShowForm(false); }}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -151,8 +290,79 @@ function AppLayout() {
           </div>
         );
 
+      case 'areas':
+        return (
+          <div className="page-content">
+            <div style={{ marginBottom: '20px' }}>
+              <button className="btn btn-primary" onClick={() => { setEditingArea(null); setShowAreaForm(true); }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Nueva Área
+              </button>
+            </div>
+            <div className="mini-stats-bar">
+              <div className="mini-stat"><span className="mini-stat-value">{areasStats.total}</span><span className="mini-stat-label">Total</span></div>
+              <div className="mini-stat"><span className="mini-stat-value active-val">{areasStats.activas}</span><span className="mini-stat-label">Activas</span></div>
+              <div className="mini-stat"><span className="mini-stat-value inactive-val">{areasStats.inactivas}</span><span className="mini-stat-label">Inactivas</span></div>
+            </div>
+            <AreasTable areas={areas} total={areasTotal} onEdit={(a) => { setEditingArea(a); setShowAreaForm(true); }} onToggle={handleToggleArea} loading={areasLoading} />
+            {showAreaForm && (
+              <div className="modal-overlay" onClick={() => { setEditingArea(null); setShowAreaForm(false); }}>
+                <div className="modal-content" onClick={e => e.stopPropagation()}>
+                  <AreaForm
+                    onSubmit={editingArea ? handleUpdateArea : handleCreateArea}
+                    initialData={editingArea ? { nombre: editingArea.nombre, descripcion: editingArea.descripcion || '', contratistaId: editingArea.contratistaId } : undefined}
+                    isEditing={!!editingArea}
+                    onCancel={() => { setEditingArea(null); setShowAreaForm(false); }}
+                    contratistas={contratistas}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'proyectos':
+        return (
+          <div className="page-content">
+            <div style={{ marginBottom: '20px' }}>
+              <button className="btn btn-primary" onClick={() => { setEditingProyecto(null); setShowProyectoForm(true); }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Nuevo Proyecto
+              </button>
+            </div>
+            <div className="mini-stats-bar">
+              <div className="mini-stat"><span className="mini-stat-value">{proyectosStats.total}</span><span className="mini-stat-label">Total</span></div>
+              <div className="mini-stat"><span className="mini-stat-value active-val">{proyectosStats.activos}</span><span className="mini-stat-label">Activos</span></div>
+              <div className="mini-stat"><span className="mini-stat-value inactive-val">{proyectosStats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
+            </div>
+            <ProyectosTable proyectos={proyectos} total={proyectosTotal} onEdit={(p) => { setEditingProyecto(p); setShowProyectoForm(true); }} onToggle={handleToggleProyecto} loading={proyectosLoading} />
+            {showProyectoForm && (
+              <div className="modal-overlay" onClick={() => { setEditingProyecto(null); setShowProyectoForm(false); }}>
+                <div className="modal-content" onClick={e => e.stopPropagation()}>
+                  <ProyectoForm
+                    onSubmit={editingProyecto ? handleUpdateProyecto : handleCreateProyecto}
+                    initialData={editingProyecto ? { nombre: editingProyecto.nombre, fechaInicio: editingProyecto.fechaInicio?.split('T')[0] || editingProyecto.fechaInicio, fechaFin: editingProyecto.fechaFin?.split('T')[0] || editingProyecto.fechaFin, areaId: editingProyecto.areaId } : undefined}
+                    isEditing={!!editingProyecto}
+                    onCancel={() => { setEditingProyecto(null); setShowProyectoForm(false); }}
+                    areas={areas}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
       case 'usuarios':
         return <UsersPage onNotify={showNotification} />;
+
+      case 'categorias':
+        return <CategoriasPage onNotify={showNotification} />;
+
+      case 'subtipos':
+        return <SubtiposPage onNotify={showNotification} />;
+
+      case 'requerimientos':
+        return <RequerimientosPage onNotify={showNotification} />;
 
       case 'documentos':
         return <DocumentosPage onNotify={showNotification} />;

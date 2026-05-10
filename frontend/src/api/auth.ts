@@ -12,6 +12,7 @@ export interface AuthUser {
   nombre: string;
   email: string;
   rol: string;
+  contratistaId?: number;
 }
 
 export interface LoginResponse {
