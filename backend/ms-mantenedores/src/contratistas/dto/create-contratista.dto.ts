@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, Length, Matches } from 'class-validator';
+import { IsString, IsEmail, IsOptional, Length, Matches, IsEnum } from 'class-validator';
 
 /**
  * DTO para crear un nuevo contratista (HU-01, CA-1)
@@ -20,4 +20,8 @@ export class CreateContratistaDto {
   @IsOptional()
   @IsString()
   telefono?: string;
+
+  @IsOptional()
+  @IsEnum(['read', 'write', 'read_write', 'admin'])
+  permisosObjectFS?: 'read' | 'write' | 'read_write' | 'admin';
 }

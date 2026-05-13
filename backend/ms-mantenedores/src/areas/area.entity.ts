@@ -12,17 +12,23 @@ import {
 import { Contratista } from '../contratistas/contratista.entity';
 import { Proyecto } from '../proyectos/proyecto.entity';
 
+import { Index } from 'typeorm';
+
 /**
  * Entidad Área - HU-02
  * Usa soft delete para mantener historial.
  */
 @Entity('areas')
+@Index('idx_areas_codigoArea', ['codigoArea'], { unique: true })
 export class Area {
     @PrimaryGeneratedColumn()
     id: number;
 
     @Column({ length: 255 })
     nombre: string;
+
+    @Column({ length: 10, unique: true, nullable: true })
+    codigoArea: string;
 
     @Column({ type: 'text', nullable: true })
     descripcion: string;

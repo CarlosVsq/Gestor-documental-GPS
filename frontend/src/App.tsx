@@ -310,7 +310,7 @@ function AppLayout() {
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
                   <AreaForm
                     onSubmit={editingArea ? handleUpdateArea : handleCreateArea}
-                    initialData={editingArea ? { nombre: editingArea.nombre, descripcion: editingArea.descripcion || '', contratistaId: editingArea.contratistaId } : undefined}
+                    initialData={editingArea ? { nombre: editingArea.nombre, codigoArea: editingArea.codigoArea, descripcion: editingArea.descripcion || '', contratistaId: editingArea.contratistaId } : undefined}
                     isEditing={!!editingArea}
                     onCancel={() => { setEditingArea(null); setShowAreaForm(false); }}
                     contratistas={contratistas}
@@ -341,7 +341,7 @@ function AppLayout() {
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
                   <ProyectoForm
                     onSubmit={editingProyecto ? handleUpdateProyecto : handleCreateProyecto}
-                    initialData={editingProyecto ? { nombre: editingProyecto.nombre, fechaInicio: editingProyecto.fechaInicio?.split('T')[0] || editingProyecto.fechaInicio, fechaFin: editingProyecto.fechaFin?.split('T')[0] || editingProyecto.fechaFin, areaId: editingProyecto.areaId } : undefined}
+                    initialData={editingProyecto ? { nombre: editingProyecto.nombre, fechaInicio: editingProyecto.fechaInicio?.split('T')[0] || editingProyecto.fechaInicio, fechaFin: editingProyecto.fechaFin?.split('T')[0] || editingProyecto.fechaFin, areaId: editingProyecto.areaId, ubicacion: editingProyecto.ubicacion, presupuestoEstimado: editingProyecto.presupuestoEstimado, horasHombre: editingProyecto.horasHombre, estadoProyecto: editingProyecto.estadoProyecto } : undefined}
                     isEditing={!!editingProyecto}
                     onCancel={() => { setEditingProyecto(null); setShowProyectoForm(false); }}
                     areas={areas}
