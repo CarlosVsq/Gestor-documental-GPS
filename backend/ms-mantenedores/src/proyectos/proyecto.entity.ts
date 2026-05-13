@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 import { Area } from '../areas/area.entity';
 
+import { Index } from 'typeorm';
+
 /**
  * Entidad Proyecto - HU-03
  * Representa un proyecto vinculado a un Área.
@@ -17,6 +19,8 @@ import { Area } from '../areas/area.entity';
  * Usa soft delete para mantener historial.
  */
 @Entity('proyectos')
+@Index('idx_proyectos_estado', ['estadoProyecto'], { where: '"estadoProyecto" != \'Finalizado\'' })
+@Index('idx_proyectos_ubicacion', ['ubicacion'])
 export class Proyecto {
     @PrimaryGeneratedColumn()
     id: number;
@@ -35,6 +39,18 @@ export class Proyecto {
 
     @Column()
     areaId: number;
+
+    @Column({ length: 255, nullable: true })
+    ubicacion: string;
+
+    @Column({ type: 'decimal', precision: 14, scale: 2, nullable: true, default: null })
+    presupuestoEstimado: number;
+
+    @Column({ type: 'integer', nullable: true, default: null })
+    horasHombre: number;
+
+    @Column({ length: 50, default: 'Ejecución' })
+    estadoProyecto: 'En Licitación' | 'Ejecución' | 'Finalizado' | 'Suspendido';
 
     @Column({ default: true })
     activo: boolean;
