@@ -13,6 +13,10 @@ export interface Proyecto {
     fechaInicio: string;
     fechaFin: string;
     areaId: number;
+    ubicacion?: string;
+    presupuestoEstimado?: number;
+    horasHombre?: number;
+    estadoProyecto: 'En Licitación' | 'Ejecución' | 'Finalizado' | 'Suspendido';
     activo: boolean;
     area?: {
         id: number;
@@ -34,6 +38,10 @@ export interface CreateProyectoDto {
     fechaInicio: string;
     fechaFin: string;
     areaId: number;
+    ubicacion?: string;
+    presupuestoEstimado?: number;
+    horasHombre?: number;
+    estadoProyecto: 'En Licitación' | 'Ejecución' | 'Finalizado' | 'Suspendido';
 }
 
 export interface ProyectosResponse {
