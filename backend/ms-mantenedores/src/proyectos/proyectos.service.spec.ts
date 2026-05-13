@@ -69,6 +69,7 @@ describe('ProyectosService', () => {
             fechaInicio: '2026-05-01',
             fechaFin: '2026-12-31',
             areaId: 1,
+            estadoProyecto: 'Ejecución' as const,
         };
 
         it('debería crear un proyecto exitosamente con código auto-generado', async () => {
@@ -76,13 +77,22 @@ describe('ProyectosService', () => {
             mockAreasService.findOne.mockResolvedValue(mockArea);
             mockQueryBuilder.getCount.mockResolvedValue(0); // primer proyecto del área
 
+            const now = new Date();
             const expected = {
                 id: 1,
                 ...createDto,
                 codigo: 'ING-001',
+                ubicacion: null,
+                presupuestoEstimado: null,
+                horasHombre: null,
+                estadoProyecto: 'Ejecución',
                 activo: true,
                 creadoPor: 'admin',
                 actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+                area: mockArea,
             };
             mockProyectoRepository.create.mockReturnValue(expected);
             mockProyectoRepository.save.mockResolvedValue(expected);
@@ -104,12 +114,22 @@ describe('ProyectosService', () => {
             mockAreasService.findOne.mockResolvedValue(mockArea);
             mockQueryBuilder.getCount.mockResolvedValue(2); // ya hay 2 proyectos
 
+            const now = new Date();
             const expected = {
                 id: 3,
                 ...createDto,
                 codigo: 'ING-003',
+                ubicacion: null,
+                presupuestoEstimado: null,
+                horasHombre: null,
+                estadoProyecto: 'Ejecución',
+                activo: true,
                 creadoPor: 'admin',
                 actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+                area: mockArea,
             };
             mockProyectoRepository.create.mockReturnValue(expected);
             mockProyectoRepository.save.mockResolvedValue(expected);
@@ -127,12 +147,22 @@ describe('ProyectosService', () => {
             mockQueryBuilder.getCount.mockResolvedValue(0);
 
             const dtoConArea2 = { ...createDto, areaId: 2 };
+            const now = new Date();
             const expected = {
                 id: 1,
                 ...dtoConArea2,
                 codigo: 'ARE-001',
+                ubicacion: null,
+                presupuestoEstimado: null,
+                horasHombre: null,
+                estadoProyecto: 'Ejecución',
+                activo: true,
                 creadoPor: 'admin',
                 actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+                area: mockArea,
             };
             mockProyectoRepository.create.mockReturnValue(expected);
             mockProyectoRepository.save.mockResolvedValue(expected);
@@ -179,9 +209,46 @@ describe('ProyectosService', () => {
     // ================================================================
     describe('findAll', () => {
         it('debería retornar una lista paginada de proyectos con relaciones', async () => {
+            const now = new Date();
             const proyectos = [
-                { id: 1, nombre: 'Proyecto A', codigo: 'ING-001', areaId: 1 },
-                { id: 2, nombre: 'Proyecto B', codigo: 'ING-002', areaId: 1 },
+                {
+                    id: 1,
+                    nombre: 'Proyecto A',
+                    codigo: 'ING-001',
+                    areaId: 1,
+                    fechaInicio: new Date('2026-05-01'),
+                    fechaFin: new Date('2026-12-31'),
+                    ubicacion: null,
+                    presupuestoEstimado: null,
+                    horasHombre: null,
+                    estadoProyecto: 'Ejecución',
+                    activo: true,
+                    creadoPor: 'admin',
+                    actualizadoPor: 'admin',
+                    creadoEn: now,
+                    actualizadoEn: now,
+                    eliminadoEn: null,
+                    area: { id: 1, nombre: 'Ingeniería', contratista: { id: 1, nombre: 'ACME' } },
+                },
+                {
+                    id: 2,
+                    nombre: 'Proyecto B',
+                    codigo: 'ING-002',
+                    areaId: 1,
+                    fechaInicio: new Date('2026-05-01'),
+                    fechaFin: new Date('2026-12-31'),
+                    ubicacion: null,
+                    presupuestoEstimado: null,
+                    horasHombre: null,
+                    estadoProyecto: 'Ejecución',
+                    activo: true,
+                    creadoPor: 'admin',
+                    actualizadoPor: 'admin',
+                    creadoEn: now,
+                    actualizadoEn: now,
+                    eliminadoEn: null,
+                    area: { id: 1, nombre: 'Ingeniería', contratista: { id: 1, nombre: 'ACME' } },
+                },
             ];
             mockProyectoRepository.findAndCount.mockResolvedValue([proyectos, 2]);
 
@@ -214,11 +281,24 @@ describe('ProyectosService', () => {
     // ================================================================
     describe('findOne', () => {
         it('debería retornar un proyecto si existe', async () => {
+            const now = new Date();
             const proyecto = {
                 id: 1,
                 nombre: 'Proyecto Test',
                 codigo: 'ING-001',
                 areaId: 1,
+                fechaInicio: new Date('2026-05-01'),
+                fechaFin: new Date('2026-12-31'),
+                ubicacion: null,
+                presupuestoEstimado: null,
+                horasHombre: null,
+                estadoProyecto: 'Ejecución',
+                activo: true,
+                creadoPor: 'admin',
+                actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
                 area: { id: 1, nombre: 'Ingeniería', contratista: { id: 1, nombre: 'ACME' } },
             };
             mockProyectoRepository.findOne.mockResolvedValue(proyecto);
@@ -243,6 +323,7 @@ describe('ProyectosService', () => {
     // UPDATE
     // ================================================================
     describe('update', () => {
+        const now = new Date();
         const existingProyecto = {
             id: 1,
             nombre: 'Proyecto Original',
@@ -250,7 +331,17 @@ describe('ProyectosService', () => {
             fechaInicio: new Date('2026-05-01'),
             fechaFin: new Date('2026-12-31'),
             areaId: 1,
+            ubicacion: null,
+            presupuestoEstimado: null,
+            horasHombre: null,
+            estadoProyecto: 'Ejecución',
+            activo: true,
+            creadoPor: 'admin',
             actualizadoPor: 'admin',
+            creadoEn: now,
+            actualizadoEn: now,
+            eliminadoEn: null,
+            area: { id: 1, nombre: 'Ingeniería', contratista: { id: 1, nombre: 'ACME' } },
         };
 
         it('debería actualizar un proyecto exitosamente', async () => {
@@ -298,7 +389,25 @@ describe('ProyectosService', () => {
     // ================================================================
     describe('toggle', () => {
         it('debería cambiar el estado activo del proyecto', async () => {
-            const proyecto = { id: 1, nombre: 'Proyecto Test', codigo: 'ING-001', activo: true, actualizadoPor: 'admin' };
+            const now = new Date();
+            const proyecto = {
+                id: 1,
+                nombre: 'Proyecto Test',
+                codigo: 'ING-001',
+                fechaInicio: new Date('2026-05-01'),
+                fechaFin: new Date('2026-12-31'),
+                areaId: 1,
+                ubicacion: null,
+                presupuestoEstimado: null,
+                horasHombre: null,
+                estadoProyecto: 'Ejecución',
+                activo: true,
+                creadoPor: 'admin',
+                actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+            };
             mockProyectoRepository.findOne.mockResolvedValue(proyecto);
             mockProyectoRepository.save.mockResolvedValue({ ...proyecto, activo: false });
 

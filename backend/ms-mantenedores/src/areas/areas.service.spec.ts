@@ -60,12 +60,26 @@ describe('AreasService', () => {
     describe('create', () => {
         const createDto = {
             nombre: 'Área de Ingeniería',
+            codigoArea: 'ING',
             descripcion: 'Área de proyectos de ingeniería',
             contratistaId: 1,
         };
 
         it('debería crear un área exitosamente', async () => {
-            const expected = { id: 1, ...createDto, activo: true, creadoPor: 'admin', actualizadoPor: 'admin' };
+            const now = new Date();
+            const expected = {
+                id: 1,
+                ...createDto,
+                codigoArea: null,
+                activo: true,
+                creadoPor: 'admin',
+                actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+                contratista: { id: 1, nombre: 'Contratista Test' },
+                proyectos: [],
+            };
             mockContratistasService.findOne.mockResolvedValue({ id: 1, nombre: 'Contratista Test' });
             mockAreaRepository.findOne.mockResolvedValue(null); // No existe duplicada
             mockAreaRepository.create.mockReturnValue(expected);
@@ -93,7 +107,21 @@ describe('AreasService', () => {
 
         it('debería lanzar RpcException si ya existe un área con el mismo nombre para el contratista', async () => {
             mockContratistasService.findOne.mockResolvedValue({ id: 1 });
-            mockAreaRepository.findOne.mockResolvedValue({ id: 2, nombre: createDto.nombre });
+            mockAreaRepository.findOne.mockResolvedValue({
+                id: 2,
+                nombre: createDto.nombre,
+                contratistaId: 1,
+                descripcion: null,
+                codigoArea: null,
+                activo: true,
+                creadoPor: 'admin',
+                actualizadoPor: 'admin',
+                creadoEn: new Date(),
+                actualizadoEn: new Date(),
+                eliminadoEn: null,
+                contratista: null,
+                proyectos: [],
+            });
 
             await expect(service.create(createDto)).rejects.toThrow(RpcException);
         });
@@ -101,9 +129,38 @@ describe('AreasService', () => {
 
     describe('findAll', () => {
         it('debería retornar una lista paginada de áreas', async () => {
+            const now = new Date();
             const areas = [
-                { id: 1, nombre: 'Área A', contratistaId: 1 },
-                { id: 2, nombre: 'Área B', contratistaId: 1 },
+                {
+                    id: 1,
+                    nombre: 'Área A',
+                    contratistaId: 1,
+                    descripcion: null,
+                    codigoArea: null,
+                    activo: true,
+                    creadoPor: 'admin',
+                    actualizadoPor: 'admin',
+                    creadoEn: now,
+                    actualizadoEn: now,
+                    eliminadoEn: null,
+                    contratista: { id: 1, nombre: 'Contratista 1' },
+                    proyectos: [],
+                },
+                {
+                    id: 2,
+                    nombre: 'Área B',
+                    contratistaId: 1,
+                    descripcion: null,
+                    codigoArea: null,
+                    activo: true,
+                    creadoPor: 'admin',
+                    actualizadoPor: 'admin',
+                    creadoEn: now,
+                    actualizadoEn: now,
+                    eliminadoEn: null,
+                    contratista: { id: 1, nombre: 'Contratista 1' },
+                    proyectos: [],
+                },
             ];
             mockAreaRepository.findAndCount.mockResolvedValue([areas, 2]);
 
@@ -123,7 +180,22 @@ describe('AreasService', () => {
 
     describe('findOne', () => {
         it('debería retornar un área si existe', async () => {
-            const area = { id: 1, nombre: 'Área Test', contratistaId: 1 };
+            const now = new Date();
+            const area = {
+                id: 1,
+                nombre: 'Área Test',
+                contratistaId: 1,
+                descripcion: null,
+                codigoArea: null,
+                activo: true,
+                creadoPor: 'admin',
+                actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+                contratista: { id: 1, nombre: 'Contratista 1' },
+                proyectos: [],
+            };
             mockAreaRepository.findOne.mockResolvedValue(area);
 
             const result = await service.findOne(1);
@@ -139,7 +211,22 @@ describe('AreasService', () => {
 
     describe('toggle', () => {
         it('debería cambiar el estado activo si no tiene proyectos asociados', async () => {
-            const area = { id: 1, nombre: 'Área Test', contratistaId: 1, activo: true };
+            const now = new Date();
+            const area = {
+                id: 1,
+                nombre: 'Área Test',
+                contratistaId: 1,
+                descripcion: null,
+                codigoArea: null,
+                activo: true,
+                creadoPor: 'admin',
+                actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+                contratista: null,
+                proyectos: [],
+            };
             mockAreaRepository.findOne.mockResolvedValue(area);
             mockProyectoRepository.count.mockResolvedValue(0);
             mockAreaRepository.save.mockResolvedValue({ ...area, activo: false });
@@ -155,7 +242,22 @@ describe('AreasService', () => {
         });
 
         it('debería lanzar RpcException si tiene proyectos asociados', async () => {
-            const area = { id: 1, nombre: 'Área Test', contratistaId: 1, activo: true };
+            const now = new Date();
+            const area = {
+                id: 1,
+                nombre: 'Área Test',
+                contratistaId: 1,
+                descripcion: null,
+                codigoArea: null,
+                activo: true,
+                creadoPor: 'admin',
+                actualizadoPor: 'admin',
+                creadoEn: now,
+                actualizadoEn: now,
+                eliminadoEn: null,
+                contratista: null,
+                proyectos: [],
+            };
             mockAreaRepository.findOne.mockResolvedValue(area);
             mockProyectoRepository.count.mockResolvedValue(3);
 

@@ -51,7 +51,19 @@ describe('ContratistasService', () => {
     };
 
     it('CA-1: debería crear un contratista exitosamente', async () => {
-      const expected = { id: 1, ...createDto, activo: true, creadoPor: 'admin', actualizadoPor: 'admin' };
+      const now = new Date();
+      const expected = {
+        id: 1,
+        ...createDto,
+        activo: true,
+        permisosObjectFS: 'read_write',
+        creadoPor: 'admin',
+        actualizadoPor: 'admin',
+        creadoEn: now,
+        actualizadoEn: now,
+        eliminadoEn: null,
+        areas: [],
+      };
       mockRepository.findOne.mockResolvedValue(null); // No existe RUT duplicado
       mockRepository.create.mockReturnValue(expected);
       mockRepository.save.mockResolvedValue(expected);
@@ -68,7 +80,22 @@ describe('ContratistasService', () => {
     });
 
     it('debería lanzar RpcException si el RUT ya existe', async () => {
-      mockRepository.findOne.mockResolvedValue({ id: 1, rut: createDto.rut });
+      const now = new Date();
+      mockRepository.findOne.mockResolvedValue({
+        id: 1,
+        rut: createDto.rut,
+        nombre: createDto.nombre,
+        email: createDto.email,
+        telefono: createDto.telefono,
+        activo: true,
+        permisosObjectFS: 'read_write',
+        creadoPor: 'admin',
+        actualizadoPor: 'admin',
+        creadoEn: now,
+        actualizadoEn: now,
+        eliminadoEn: null,
+        areas: [],
+      });
 
       await expect(service.create(createDto)).rejects.toThrow(RpcException);
     });
@@ -76,9 +103,38 @@ describe('ContratistasService', () => {
 
   describe('findAll', () => {
     it('CA-2: debería retornar una lista paginada de contratistas', async () => {
+      const now = new Date();
       const contratistas = [
-        { id: 1, nombre: 'Constructora A', rut: '76.111.111-1' },
-        { id: 2, nombre: 'Constructora B', rut: '76.222.222-2' },
+        {
+          id: 1,
+          nombre: 'Constructora A',
+          rut: '76.111.111-1',
+          email: 'contacto@constructoraa.cl',
+          telefono: '+56912345678',
+          activo: true,
+          permisosObjectFS: 'read_write',
+          creadoPor: 'admin',
+          actualizadoPor: 'admin',
+          creadoEn: now,
+          actualizadoEn: now,
+          eliminadoEn: null,
+          areas: [],
+        },
+        {
+          id: 2,
+          nombre: 'Constructora B',
+          rut: '76.222.222-2',
+          email: 'contacto@constructorab.cl',
+          telefono: '+56987654321',
+          activo: true,
+          permisosObjectFS: 'read_write',
+          creadoPor: 'admin',
+          actualizadoPor: 'admin',
+          creadoEn: now,
+          actualizadoEn: now,
+          eliminadoEn: null,
+          areas: [],
+        },
       ];
       mockRepository.findAndCount.mockResolvedValue([contratistas, 2]);
 
@@ -96,7 +152,22 @@ describe('ContratistasService', () => {
 
   describe('findOne', () => {
     it('debería retornar un contratista si existe', async () => {
-      const contratista = { id: 1, nombre: 'Test', rut: '76.111.111-1' };
+      const now = new Date();
+      const contratista = {
+        id: 1,
+        nombre: 'Test',
+        rut: '76.111.111-1',
+        email: 'test@test.cl',
+        telefono: '+56912345678',
+        activo: true,
+        permisosObjectFS: 'read_write',
+        creadoPor: 'admin',
+        actualizadoPor: 'admin',
+        creadoEn: now,
+        actualizadoEn: now,
+        eliminadoEn: null,
+        areas: [],
+      };
       mockRepository.findOne.mockResolvedValue(contratista);
 
       const result = await service.findOne(1);
@@ -112,7 +183,22 @@ describe('ContratistasService', () => {
 
   describe('toggle', () => {
     it('CA-4: debería cambiar el estado activo de un contratista', async () => {
-      const contratista = { id: 1, nombre: 'Test', rut: '76.111.111-1', activo: true, actualizadoPor: 'admin' };
+      const now = new Date();
+      const contratista = {
+        id: 1,
+        nombre: 'Test',
+        rut: '76.111.111-1',
+        email: 'test@test.cl',
+        telefono: '+56912345678',
+        activo: true,
+        permisosObjectFS: 'read_write',
+        creadoPor: 'admin',
+        actualizadoPor: 'admin',
+        creadoEn: now,
+        actualizadoEn: now,
+        eliminadoEn: null,
+        areas: [],
+      };
       mockRepository.findOne.mockResolvedValue(contratista);
       mockRepository.save.mockResolvedValue({ ...contratista, activo: false });
 
