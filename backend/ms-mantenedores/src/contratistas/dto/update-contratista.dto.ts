@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, Length, Matches } from 'class-validator';
+import { IsString, IsEmail, IsOptional, Length, Matches, IsEnum } from 'class-validator';
 
 /**
  * DTO para actualizar un contratista (HU-01, CA-3)
@@ -24,4 +24,8 @@ export class UpdateContratistaDto {
   @IsOptional()
   @IsString()
   telefono?: string;
+
+  @IsOptional()
+  @IsEnum(['read', 'write', 'read_write', 'admin'])
+  permisosObjectFS?: 'read' | 'write' | 'read_write' | 'admin';
 }
