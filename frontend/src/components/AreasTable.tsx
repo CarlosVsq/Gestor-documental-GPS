@@ -53,6 +53,7 @@ export default function AreasTable({ areas, total, onEdit, onToggle, loading }: 
                         <thead>
                             <tr>
                                 <th>Área</th>
+                                <th>Código</th>
                                 <th>Descripción</th>
                                 <th>Contratista</th>
                                 <th>Estado</th>
@@ -71,6 +72,7 @@ export default function AreasTable({ areas, total, onEdit, onToggle, loading }: 
                                             <span className="person-name">{a.nombre}</span>
                                         </div>
                                     </td>
+                                    <td><code className="rut-chip">{a.codigoArea}</code></td>
                                     <td className="cell-muted">{a.descripcion || '—'}</td>
                                     <td>
                                         {a.contratista ? (
