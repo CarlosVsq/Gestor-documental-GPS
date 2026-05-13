@@ -13,6 +13,7 @@ export interface Contratista {
   rut: string;
   email: string;
   telefono?: string;
+  permisosObjectFS?: 'read' | 'write' | 'read_write' | 'admin' | null;
   activo: boolean;
   creadoPor: string;
   actualizadoPor: string;
@@ -25,6 +26,7 @@ export interface CreateContratistaDto {
   rut: string;
   email: string;
   telefono?: string;
+  permisosObjectFS?: 'read' | 'write' | 'read_write' | 'admin' | null;
 }
 
 export interface ContratistasResponse {
