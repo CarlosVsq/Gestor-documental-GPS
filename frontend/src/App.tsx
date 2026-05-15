@@ -15,6 +15,7 @@ import DocumentosPage from './pages/DocumentosPage';
 import CategoriasPage from './pages/CategoriasPage';
 import SubtiposPage from './pages/SubtiposPage';
 import RequerimientosPage from './pages/RequerimientosPage';
+import AlmacenamientoPage from './pages/almacenamiento/AlmacenamientoPage';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
@@ -23,7 +24,7 @@ import type { Area, CreateAreaDto, AreaStats } from './api/areas';
 import { proyectosApi } from './api/proyectos';
 import type { Proyecto, CreateProyectoDto, ProyectoStats } from './api/proyectos';
 
-export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'categorias' | 'subtipos' | 'requerimientos' | 'documentos' | 'reportes' | 'usuarios';
+export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'categorias' | 'subtipos' | 'requerimientos' | 'documentos' | 'almacenamiento' | 'reportes' | 'usuarios';
 
 // ============================================================
 // Helpers reutilizables
@@ -48,7 +49,8 @@ const getPageHeaderInfo = (page: ActivePage) => {
     case 'categorias': return { title: 'Categorías', desc: 'Gestiona la taxonomía documental principal' };
     case 'subtipos': return { title: 'Subtipos', desc: 'Gestiona los subtipos documentales por categoría' };
     case 'usuarios': return { title: 'Administración de Usuarios', desc: 'Gestión de accesos y roles del Sistema de Gestión Documental' };
-    case 'documentos': return { title: 'Documentos', desc: 'Sube y centraliza la documentación técnica de las obras' };
+    case 'documentos': return { title: 'Documentos (Legacy)', desc: 'Módulo anterior de documentos — usa Almacenamiento para la nueva versión' };
+    case 'almacenamiento': return { title: 'Gestión de Documentos', desc: 'Expedientes digitales, carga de archivos y firma digital' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
   }
 };
@@ -363,6 +365,9 @@ function AppLayout() {
 
       case 'requerimientos':
         return <RequerimientosPage onNotify={showNotification} />;
+
+      case 'almacenamiento':
+        return <AlmacenamientoPage onNotify={showNotification} />;
 
       case 'documentos':
         return <DocumentosPage onNotify={showNotification} />;
