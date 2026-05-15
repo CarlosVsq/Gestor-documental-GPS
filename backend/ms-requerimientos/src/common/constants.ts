@@ -1,5 +1,5 @@
 /**
- * Constantes compartidas — ms-documentos
+ * Constantes compartidas — ms-requerimientos
  */
 export const DOCUMENTOS_PATTERNS = {
   CREATE: 'documentos.create',
@@ -13,3 +13,6 @@ export const REQUERIMIENTOS_PATTERNS = {
   FIND_ONE: 'requerimientos.findOne',
   UPDATE_STATE: 'requerimientos.updateState',
 } as const;
+
+/** Token de inyección del cliente TCP hacia ms-almacenamiento */
+export const ALMACENAMIENTO_CLIENT = 'ALMACENAMIENTO_SERVICE';

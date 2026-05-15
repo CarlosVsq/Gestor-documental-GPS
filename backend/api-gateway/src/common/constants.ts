@@ -14,8 +14,9 @@ export enum Role {
 export const SERVICE_NAMES = {
   AUTH: 'AUTH_SERVICE',
   MANTENEDORES: 'MANTENEDORES_SERVICE',
-  DOCUMENTOS: 'DOCUMENTOS_SERVICE',
+  DOCUMENTOS: 'DOCUMENTOS_SERVICE',      // @deprecated — usa ALMACENAMIENTO
   REQUERIMIENTOS: 'REQUERIMIENTOS_SERVICE',
+  ALMACENAMIENTO: 'ALMACENAMIENTO_SERVICE',
 } as const;
 
 export const AUTH_PATTERNS = {
@@ -84,4 +85,23 @@ export const REQUERIMIENTOS_PATTERNS = {
   FIND_ALL: 'requerimientos.findAll',
   FIND_ONE: 'requerimientos.findOne',
   UPDATE_STATE: 'requerimientos.updateState',
+} as const;
+
+export const ALMACENAMIENTO_PATTERNS = {
+  // Documentos
+  UPLOAD: 'almacenamiento.upload',
+  UPLOAD_BULK: 'almacenamiento.uploadBulk',
+  DOWNLOAD: 'almacenamiento.download',
+  FIND_ALL: 'almacenamiento.findAll',
+  FIND_ONE: 'almacenamiento.findOne',
+  FIND_BY_REQUERIMIENTO: 'almacenamiento.findByRequerimiento',
+  SEARCH: 'almacenamiento.search',
+  DELETE: 'almacenamiento.delete',
+  UPDATE_ESTADO: 'almacenamiento.documento.updateEstado',
+  FIRMAR_DOCUMENTO: 'almacenamiento.documento.firmar',
+  // Expedientes
+  CREATE_EXPEDIENTE: 'almacenamiento.expediente.create',
+  GET_TREE: 'almacenamiento.expediente.tree',
+  // PDF
+  GENERATE_PDF: 'almacenamiento.pdf.generate',
 } as const;
