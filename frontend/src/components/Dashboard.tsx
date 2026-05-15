@@ -14,9 +14,9 @@ export default function Dashboard({ stats, totalContratistas, areasTotal, proyec
   const [totalUsuarios, setTotalUsuarios] = useState(0);
 
   useEffect(() => {
-    // Obtenemos los usuarios reales (ignoramos el error si no hay token o algo falla)
-    fetch('http://localhost:3000/auth/users', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    // Obtenemos los usuarios reales vía el proxy /api (HU-19)
+    fetch('/api/auth/users', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('sgd_token')}` }
     })
       .then(res => res.json())
       .then(data => {
@@ -24,6 +24,7 @@ export default function Dashboard({ stats, totalContratistas, areasTotal, proyec
       })
       .catch(() => {});
   }, []);
+
   return (
     <div className="page-content">
 
@@ -90,7 +91,7 @@ export default function Dashboard({ stats, totalContratistas, areasTotal, proyec
               </div>
               <span>Crear Requerimiento</span>
             </button>
-            <button className="quick-action-btn" onClick={() => onNavigate('documentos')}>
+            <button className="quick-action-btn" onClick={() => onNavigate('almacenamiento')}>
               <div className="qa-icon qa-orange">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
               </div>

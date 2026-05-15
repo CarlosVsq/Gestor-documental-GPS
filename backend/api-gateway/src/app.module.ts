@@ -11,6 +11,7 @@ import { ContratistasGatewayModule } from './contratistas/contratistas-gateway.m
 import { AreasGatewayModule } from './areas/areas-gateway.module';
 import { ProyectosGatewayModule } from './proyectos/proyectos-gateway.module';
 import { DocumentosGatewayModule } from './documentos/documentos-gateway.module';
+import { AlmacenamientoGatewayModule } from './almacenamiento/almacenamiento-gateway.module';
 
 import { TcpClientsModule } from './common/tcp-clients.module';
 import { CategoriasGatewayModule } from './categorias/categorias-gateway.module';
@@ -46,6 +47,7 @@ import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gat
     CategoriasGatewayModule,
     SubtiposGatewayModule,
     RequerimientosGatewayModule,
+    AlmacenamientoGatewayModule,
   ],
 })
 export class AppModule {}

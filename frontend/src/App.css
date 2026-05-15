@@ -1465,3 +1465,421 @@ tbody tr:last-child td { border-bottom: none; }
   .user-info { display: none; }
 }
 
+/* ============================================================
+   ALMACENAMIENTO MODULE
+   ============================================================ */
+
+/* ─── Layout split: Sidebar + Main ───────────────────────────── */
+.almacenamiento-layout {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+}
+
+.almacenamiento-sidebar {
+  width: 280px;
+  min-width: 240px;
+  max-width: 320px;
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px 16px 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 100px);
+  position: sticky;
+  top: 24px;
+}
+
+.almacenamiento-main {
+  flex: 1;
+  padding-left: 24px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+/* ─── Search bar ──────────────────────────────────────────────── */
+.search-bar { flex-shrink: 0; }
+
+/* ─── Tree panel ──────────────────────────────────────────────── */
+.tree-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* ─── Document Tree ───────────────────────────────────────────── */
+.document-tree { display: flex; flex-direction: column; gap: 2px; }
+
+.tree-node { display: flex; flex-direction: column; }
+
+.tree-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  font-family: inherit;
+  color: var(--gray-700);
+  text-align: left;
+  transition: background var(--transition);
+}
+
+.tree-toggle:hover { background: var(--gray-100); }
+
+.tree-toggle.active {
+  background: var(--accent-50);
+  color: var(--accent-700);
+  font-weight: 600;
+}
+
+.tree-contratista > .tree-toggle { font-weight: 600; font-size: 0.85rem; }
+.tree-requerimiento { padding-left: 8px !important; }
+
+.tree-chevron { display: flex; flex-shrink: 0; color: var(--gray-400); }
+.tree-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tree-badge {
+  font-size: 0.7rem;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  padding: 1px 6px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.tree-children { padding-left: 20px; }
+
+.tree-empty {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--gray-400);
+}
+
+/* ─── Drop Zone ───────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius-lg);
+  padding: 32px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--gray-50);
+  user-select: none;
+}
+
+.drop-zone:hover {
+  border-color: var(--accent-400);
+  background: var(--accent-50);
+}
+
+.drop-zone-active {
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+  box-shadow: 0 0 0 3px rgba(54, 211, 153, 0.15);
+}
+
+/* ─── File List ───────────────────────────────────────────────── */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition);
+}
+
+.file-item-error {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--red-50);
+}
+
+.file-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+/* ─── Firma Canvas ────────────────────────────────────────────── */
+.firma-canvas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.firma-canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.firma-canvas-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.firma-saved-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #166534;
+  background: #dcfce7;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.firma-canvas-wrapper {
+  position: relative;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: white;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.06);
+}
+
+.firma-canvas {
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.firma-canvas.drawing { cursor: crosshair; }
+
+.firma-canvas-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  gap: 6px;
+}
+
+.firma-canvas-placeholder span {
+  font-size: 0.82rem;
+  color: var(--gray-400);
+}
+
+.firma-canvas-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.firma-canvas-hint {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  text-align: center;
+}
+
+/* ─── Button sizes ────────────────────────────────────────────── */
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+}
+
+.btn-xs {
+  padding: 4px 10px;
+  font-size: 0.76rem;
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-secondary:hover { background: var(--gray-50); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.btn-danger {
+  background: var(--red-500);
+  color: white;
+  border: 1px solid var(--red-500);
+}
+.btn-danger:hover { background: #b91c1c; }
+
+/* ─── Animaciones para AppDialog ─────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── Upload modal ────────────────────────────────────────────── */
+.upload-modal { overflow: hidden; }
+
+/* ─── Data Table (dentro de main del almacenamiento) ─────────── */
+.doc-table-wrapper {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.data-table { width: 100%; border-collapse: collapse; }
+
+.data-table thead { background: var(--gray-50); }
+
+.data-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-700);
+  vertical-align: middle;
+}
+
+.data-table tbody tr { transition: background var(--transition); }
+.data-table tbody tr:hover { background: var(--accent-50); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+/* ─── Badge variants ──────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-warning { background: #fef9c3; color: #854d0e; }
+.badge-success { background: #dcfce7; color: #166534; }
+.badge-gray    { background: var(--gray-100); color: var(--gray-500); }
+.badge-info    { background: var(--accent-50); color: var(--accent-700); }
+
+/* ─── Upload result ───────────────────────────────────────────── */
+.upload-result { display: flex; flex-direction: column; gap: 12px; }
+
+.result-success {
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+}
+
+/* ─── Spinner variants ────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0;
+}
+
+.spinner-lg {
+  width: 36px;
+  height: 36px;
+  border-width: 3px;
+  border-color: var(--gray-200);
+  border-top-color: var(--accent-500);
+  display: block;
+  margin: 0 auto;
+}
+
+/* ─── Form input ──────────────────────────────────────────────── */
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-family: inherit;
+  color: var(--gray-800);
+  outline: none;
+  transition: all var(--transition);
+}
+
+.form-input:focus {
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 3px rgba(54, 211, 153, 0.12);
+}
+
+/* ─── Section header ──────────────────────────────────────────── */
+.section-header { display: flex; align-items: flex-start; gap: 12px; }
+
+@media (max-width: 768px) {
+  .almacenamiento-layout { flex-direction: column; height: auto; }
+  .almacenamiento-sidebar { width: 100%; max-width: 100%; border-right: none; border-bottom: 1px solid var(--gray-200); padding-bottom: 12px; }
+  .almacenamiento-main { padding-left: 0; padding-top: 16px; }
+}
+
+/* ─── Range input (firma modal) ───────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: grab;
+}
+input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
+
+/* ─── Firma modal visor ───────────────────────────────────────── */
+.modal-content { display: flex; flex-direction: column; }

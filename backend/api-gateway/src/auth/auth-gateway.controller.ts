@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
+  UseFilters,
   Request,
   HttpCode,
   HttpStatus,
@@ -26,6 +27,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { Role, SERVICE_NAMES, AUTH_PATTERNS } from '../common/constants';
+import { AuthExceptionFilter } from '../common/auth-exception.filter';
 
 /**
  * Gateway Controller de Auth — HU-25/HU-19
@@ -58,9 +60,11 @@ export class AuthGatewayController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
+  @UseFilters(AuthExceptionFilter)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
   @ApiResponse({ status: 200, description: 'Perfil del usuario' })
+  @ApiResponse({ status: 401, description: 'Token inválido o expirado' })
   async getProfile(@Request() req: any) {
     try {
       return await firstValueFrom(

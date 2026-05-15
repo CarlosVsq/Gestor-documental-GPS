@@ -28,6 +28,9 @@ RUN echo 'server { \
   } \
   }' > /etc/nginx/conf.d/default.conf
 
+# Solucionar MIME type error para archivos .mjs en Nginx
+RUN sed -i '/application\/javascript/s/js;/js mjs;/' /etc/nginx/mime.types || echo "types { application/javascript mjs; }" > /etc/nginx/conf.d/mjs.conf
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]

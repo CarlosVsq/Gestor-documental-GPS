@@ -22,7 +22,7 @@ Sistema de gestión documental desarrollado como "Hola Mundo" para la asignatura
 ```
 Frontend (React) → HTTP → API Gateway (:3000) → TCP → ms-auth (:3001)
                                                     → ms-mantenedores (:3002)
-                                                    → ms-documentos (:3003)
+                                                    → ms-almacenamiento (:3003)
                                                     → ms-requerimientos (:3004)
 ```
 
@@ -31,7 +31,7 @@ Frontend (React) → HTTP → API Gateway (:3000) → TCP → ms-auth (:3001)
 | `api-gateway` | 3000 | HTTP | Punto de entrada, Swagger, JWT, CORS, Agregación |
 | `ms-auth` | 3001 | TCP | Login, JWT, CRUD usuarios |
 | `ms-mantenedores` | 3002 | TCP | Contratistas, Áreas, Proyectos |
-| `ms-documentos` | 3003 | TCP | Gestión documental y archivos físicos |
+| `ms-almacenamiento` | 3003 | TCP | Gestión de archivos (SeaweedFS), firmas y PDF |
 | `ms-requerimientos` | 3004 | TCP | Gestión de requerimientos (tickets) y estados |
 
 > **Nota de Arquitectura**: Cada microservicio es **100% independiente** y aislado. No existen dependencias de carpetas físicas como `shared/`. Cada servicio define sus constantes y configuraciones internamente en su carpeta `src/common/constants.ts`. El orquestador (`api-gateway`) se encarga de la agregación de datos (API Composition) cruzando información de múltiples microservicios si es necesario.
@@ -59,7 +59,7 @@ docker compose up --build
 cd backend/api-gateway && npm install
 cd ../ms-auth && npm install
 cd ../ms-mantenedores && npm install
-cd ../ms-documentos && npm install
+cd ../ms-almacenamiento && npm install
 cd ../ms-requerimientos && npm install
 
 # 2. Instalar frontend
@@ -73,8 +73,8 @@ cd backend/ms-auth && npm run start:dev
 # Terminal 2 — ms-mantenedores
 cd backend/ms-mantenedores && npm run start:dev
 
-# Terminal 3 — ms-documentos
-cd backend/ms-documentos && npm run start:dev
+# Terminal 3 — ms-almacenamiento
+cd backend/ms-almacenamiento && npm run start:dev
 
 # Terminal 4 — ms-requerimientos
 cd backend/ms-requerimientos && npm run start:dev
@@ -95,7 +95,7 @@ cd frontend && npm run dev
 │   ├── api-gateway/         # Gateway HTTP (Swagger, JWT, CORS, Composición)
 │   ├── ms-auth/             # Microservicio de autenticación
 │   ├── ms-mantenedores/     # Microservicio de mantenedores
-│   ├── ms-documentos/       # Microservicio de documentos
+│   ├── ms-almacenamiento/   # Microservicio de almacenamiento (SeaweedFS, Firmas)
 │   └── ms-requerimientos/   # Microservicio de requerimientos (tickets)
 ├── frontend/                # React + Vite
 ├── docker-compose.yml
@@ -111,6 +111,8 @@ cd frontend && npm run dev
 - **HU-05: CRUD de Subtipos**
 - **HU-06: Integridad Jerárquica**
 - **HU-07: Carga de Documentos**
+- **HU-09: Visor integrado de documentos (PDF).**
+- **HU-11: Firma digital en PDF.**
 - **HU-14: Requerimientos cambian de estado.**
 - **HU-15: Bandeja de tareas con requerimientos pendientes.** (Verificar posteriormente con el frontend final)
 - **HU-25: Login de Usuarios**

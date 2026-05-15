@@ -1,16 +1,22 @@
-import { Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import { RpcException, ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Requerimiento, EstadoRequerimiento, PrioridadRequerimiento } from './requerimiento.entity';
 import { CreateRequerimientoDto } from './dto/create-requerimiento.dto';
 import { UpdateEstadoDto } from './dto/update-estado.dto';
+import { ALMACENAMIENTO_CLIENT } from '../common/constants';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class RequerimientosService {
+    private readonly logger = new Logger(RequerimientosService.name);
+
     constructor(
         @InjectRepository(Requerimiento)
         private readonly requerimientoRepository: Repository<Requerimiento>,
+        @Inject(ALMACENAMIENTO_CLIENT)
+        private readonly almacenamientoClient: ClientProxy,
     ) { }
 
     private async generateCodigoTicket(): Promise<string> {
@@ -38,19 +44,38 @@ export class RequerimientosService {
     async create(createDto: CreateRequerimientoDto): Promise<Requerimiento> {
         const codigoTicket = await this.generateCodigoTicket();
 
+        // Generamos el storagePath usando IDs para evitar caracteres especiales
+        // Formato: /{contratistaId}/{areaId}/{proyectoId}/{codigoTicket}
+        const storagePath = `/${createDto.contratistaId}/${createDto.areaId}/${createDto.proyectoId}/${codigoTicket}`;
+
         const req = this.requerimientoRepository.create({
             ...createDto,
             codigoTicket,
             estado: EstadoRequerimiento.ABIERTO,
             prioridad: createDto.prioridad || PrioridadRequerimiento.MEDIA,
-            // TODO: Modificar aquí la lógica de storage (campos storagePath y totalDocumentos)
-            // cuando se implemente la carga de archivos
-            storagePath: null,
+            storagePath,
             totalDocumentos: 0,
-            creadoPor: 'admin', 
+            creadoPor: 'admin',
             actualizadoPor: 'admin',
         });
-        return this.requerimientoRepository.save(req);
+        const saved = await this.requerimientoRepository.save(req);
+
+        // HU-N4: Crear el expediente (directorio) en SeaweedFS de forma asíncrona.
+        // No bloqueamos la respuesta al cliente — si falla, el expediente se puede
+        // crear manualmente luego mediante POST /api/almacenamiento/expediente.
+        this.almacenamientoClient
+            .send('almacenamiento.expediente.create', {
+                contratistaId: createDto.contratistaId,
+                areaId: createDto.areaId,
+                proyectoId: createDto.proyectoId,
+                codigoTicket,
+            })
+            .subscribe({
+                next: () => this.logger.log(`Expediente creado en SeaweedFS: ${storagePath}`),
+                error: (err) => this.logger.warn(`No se pudo crear expediente en SeaweedFS: ${err?.message}`),
+            });
+
+        return saved;
     }
 
     async findAll(
