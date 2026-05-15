@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { CacheModule } from '@nestjs/cache-manager';
-import { SERVICE_NAMES } from './common/constants';
+
+// Métricas Prometheus
+import { MetricsModule } from './common/metrics/metrics.module';
+import { HttpMetricsMiddleware } from './common/metrics/http-metrics.middleware';
 
 // Módulos del Gateway (proxy controllers)
 import { AuthGatewayModule } from './auth/auth-gateway.module';
@@ -19,7 +21,10 @@ import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gat
 
 @Module({
   imports: [
-    // Conexiones TCP a los microservicios (Global)
+    // Métricas Prometheus (Global, expone /metrics y declara contadores/histogramas)
+    MetricsModule,
+
+    // Conexiones TCP a los microservicios (Global, ya instrumentadas)
     TcpClientsModule,
 
     // JWT para validación local de tokens en el Gateway
@@ -48,4 +53,13 @@ import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gat
     RequerimientosGatewayModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Mide TODAS las requests (incluidas 401/403 rechazadas por Guards),
+    // excepto el scrape de Prometheus al propio /metrics.
+    consumer
+      .apply(HttpMetricsMiddleware)
+      .exclude('metrics')
+      .forRoutes('*');
+  }
+}

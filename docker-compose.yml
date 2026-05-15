@@ -162,7 +162,7 @@ services:
     networks:
       - sgd-network
 
-  # --- Frontend React (único puerto expuesto al exterior) ---
+  # --- Frontend React (puerto expuesto al exterior) ---
   frontend:
     image: ghcr.io/carlosvsq/gestor-documental-gps/frontend:latest
     build:
@@ -179,10 +179,92 @@ services:
     networks:
       - sgd-network
 
+  # ============================================================
+  # Observabilidad — Prometheus + cAdvisor + node-exporter + Grafana
+  # ------------------------------------------------------------
+  # Solo Grafana se expone al host; el resto vive dentro de sgd-network.
+  # ============================================================
+
+  # --- Métricas de contenedores (interno) ---
+  # Config minimalista que funciona tanto con Docker como con Podman rootless.
+  # En Docker server (producción) cAdvisor leerá métricas de todos los contenedores.
+  # En Podman rootless local puede reportar menos métricas, pero arranca limpio.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: sgd-cadvisor
+    command:
+      - '--housekeeping_interval=10s'
+      - '--store_container_labels=false'
+    volumes:
+      - /sys:/sys:ro
+    networks:
+      - sgd-network
+
+  # --- Métricas del host Linux (interno) ---
+  # Sin bind-mount de "/" (incompatible con rootless). Mantiene /proc y /sys.
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: sgd-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    networks:
+      - sgd-network
+
+  # --- Prometheus (interno, solo Grafana lo consulta) ---
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: sgd-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - cadvisor
+      - node-exporter
+      - api-gateway
+    networks:
+      - sgd-network
+
+  # --- Grafana (ÚNICO portal de observabilidad expuesto al host) ---
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: sgd-grafana
+    env_file:
+      - .env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - sgd-network
+
 volumes:
   pgdata:
     driver: local
   uploads:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:

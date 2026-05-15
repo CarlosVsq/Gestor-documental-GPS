@@ -1,0 +1,392 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Resumen",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Request rate (req/s)",
+      "id": 1,
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total[1m]))", "refId": "A", "legendFormat": "req/s" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "orange", "value": 50 },
+            { "color": "red", "value": 200 }
+          ]}
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Errores 5xx (1m)",
+      "id": 2,
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[1m]))", "refId": "A", "legendFormat": "5xx/s" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 0.1 }
+          ]}
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Latencia p95 global",
+      "id": 3,
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "p95" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "orange", "value": 0.5 },
+            { "color": "red", "value": 1 }
+          ]}
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "CPU host (%)",
+      "id": 4,
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)", "refId": "A", "legendFormat": "CPU %" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "orange", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+
+    {
+      "type": "row",
+      "id": 101,
+      "title": "Aplicación · Tráfico HTTP",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Request rate por ruta",
+      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (route) (rate(http_requests_total[1m]))", "refId": "A", "legendFormat": "{{route}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 10 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia p50 / p95 / p99 (s)",
+      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "refId": "B", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "refId": "C", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2, "fillOpacity": 8 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top rutas por volumen (últimos 5m)",
+      "id": 7,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "topk(15, sum by (route, method, status_code) (increase(http_requests_total[5m])))", "refId": "A", "format": "table", "instant": true }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "showHeader": true }
+    },
+
+    {
+      "type": "row",
+      "id": 102,
+      "title": "Aplicación · TCP downstream a microservicios",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia p95 por microservicio",
+      "id": 8,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(tcp_request_duration_seconds_bucket[5m])) by (le, service))", "refId": "A", "legendFormat": "{{service}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2, "fillOpacity": 8 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Errores TCP por microservicio (rate 1m)",
+      "id": 9,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (service) (rate(tcp_requests_total{result=\"error\"}[1m]))", "refId": "A", "legendFormat": "{{service}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 10 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+
+    {
+      "type": "row",
+      "id": 103,
+      "title": "Infraestructura · Contenedores",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU por contenedor SGD (%)",
+      "id": 10,
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"sgd-.+\"}[1m])) * 100", "refId": "A", "legendFormat": "{{name}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "custom": { "lineWidth": 2, "fillOpacity": 8 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "RAM por contenedor SGD",
+      "id": 11,
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name=~\"sgd-.+\"}", "refId": "A", "legendFormat": "{{name}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2, "fillOpacity": 8 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Red RX por contenedor (B/s)",
+      "id": 12,
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 41 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (name) (rate(container_network_receive_bytes_total{name=~\"sgd-.+\"}[1m]))", "refId": "A", "legendFormat": "{{name}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2, "fillOpacity": 8 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Red TX por contenedor (B/s)",
+      "id": 13,
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 41 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (name) (rate(container_network_transmit_bytes_total{name=~\"sgd-.+\"}[1m]))", "refId": "A", "legendFormat": "{{name}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2, "fillOpacity": 8 } } },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      }
+    },
+
+    {
+      "type": "row",
+      "id": 104,
+      "title": "Infraestructura · Host Linux",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "collapsed": true,
+      "panels": [
+        {
+          "type": "stat",
+          "title": "RAM host usada (%)",
+          "id": 14,
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 49 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "A", "legendFormat": "RAM %" }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent", "min": 0, "max": 100,
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "orange", "value": 75 },
+                { "color": "red", "value": 90 }
+              ]}
+            }
+          },
+          "options": {
+            "colorMode": "background", "graphMode": "area",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Disco / disponible",
+          "id": 15,
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 49 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"}", "refId": "A", "legendFormat": "disponible" }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Load average (1m)",
+          "id": 16,
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 49 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "node_load1", "refId": "A", "legendFormat": "load1" }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Uptime host",
+          "id": 17,
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 49 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "time() - node_boot_time_seconds", "refId": "A", "legendFormat": "uptime" }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          }
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["sgd", "overview"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SGD · Observabilidad",
+  "uid": "sgd-overview",
+  "version": 1,
+  "weekStart": ""
+}

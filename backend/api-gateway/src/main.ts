@@ -13,8 +13,8 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Prefijo global de la API
-  app.setGlobalPrefix('api');
+  // Prefijo global de la API (excluye /metrics para que Prometheus lo scrapee en la raíz)
+  app.setGlobalPrefix('api', { exclude: ['metrics'] });
 
   // Validación global de DTOs
   app.useGlobalPipes(
