@@ -83,14 +83,63 @@ services:
     networks:
       - sgd-network
 
-  # --- Microservicio de Documentos (TCP :3003) ---
-  ms-documentos:
-    image: ghcr.io/carlosvsq/gestor-documental-gps/ms-documentos:latest
+  # --- [DEPRECADO] Microservicio de Documentos (reemplazado por ms-almacenamiento) ---
+  # ms-documentos NO se levanta. Ver backend/ms-documentos/DEPRECATED.md
+
+  # --- SeaweedFS Master (coordinador del cluster) ---
+  seaweedfs-master:
+    image: chrislusf/seaweedfs:latest
+    container_name: sgd-seaweedfs-master
+    command: "master -ip=seaweedfs-master -port=9333 -mdir=/data"
+    volumes:
+      - seaweedfs-master-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://seaweedfs-master:9333/cluster/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sgd-network
+
+  # --- SeaweedFS Volume Node (almacenamiento real de archivos) ---
+  seaweedfs-volume:
+    image: chrislusf/seaweedfs:latest
+    container_name: sgd-seaweedfs-volume
+    command: "volume -mserver=seaweedfs-master:9333 -port=8080 -ip=seaweedfs-volume -dir=/data -max=100"
+    volumes:
+      - seaweedfs-volume-data:/data
+    depends_on:
+      seaweedfs-master:
+        condition: service_healthy
+    networks:
+      - sgd-network
+
+  # --- SeaweedFS Filer (API REST para operaciones de archivos) ---
+  # Expone API REST en :8888 — usado por ms-almacenamiento
+  seaweedfs-filer:
+    image: chrislusf/seaweedfs:latest
+    container_name: sgd-seaweedfs-filer
+    command: "filer -master=seaweedfs-master:9333 -port=8888 -ip=seaweedfs-filer"
+    volumes:
+      - seaweedfs-filer-data:/data
+    depends_on:
+      seaweedfs-volume:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://seaweedfs-filer:8888/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sgd-network
+
+  # --- Microservicio de Almacenamiento (TCP :3003) — reemplaza ms-documentos ---
+  ms-almacenamiento:
     build:
       context: ./backend
-      dockerfile: ms-documentos/Dockerfile
+      dockerfile: ms-almacenamiento/Dockerfile
       network: host
-    container_name: sgd-ms-documentos
+    container_name: sgd-ms-almacenamiento
     env_file:
       - .env
     environment:
@@ -99,15 +148,20 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_DATABASE: ${DB_DATABASE}
+      SEAWEEDFS_FILER_URL: http://seaweedfs-filer:8888
+      # Configura las restricciones de archivos:
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
+      ALLOWED_MIME_TYPES: ${ALLOWED_MIME_TYPES:-application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,image/png,image/jpeg,image/gif,image/webp}
     depends_on:
       postgres:
+        condition: service_healthy
+      seaweedfs-filer:
         condition: service_healthy
     networks:
       - sgd-network
 
   # --- Microservicio de Requerimientos (TCP :3004) ---
   ms-requerimientos:
-    image: ghcr.io/carlosvsq/gestor-documental-gps/ms-requerimientos:latest
     build:
       context: ./backend
       dockerfile: ms-requerimientos/Dockerfile
@@ -121,9 +175,13 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_DATABASE: ${DB_DATABASE}
+      ALMACENAMIENTO_SERVICE_HOST: ms-almacenamiento
+      ALMACENAMIENTO_SERVICE_PORT: 3003
     depends_on:
       postgres:
         condition: service_healthy
+      ms-almacenamiento:
+        condition: service_started
     networks:
       - sgd-network
 
@@ -145,18 +203,20 @@ services:
       AUTH_SERVICE_PORT: 3001
       MANTENEDORES_SERVICE_HOST: ms-mantenedores
       MANTENEDORES_SERVICE_PORT: 3002
-      DOCUMENTOS_SERVICE_HOST: ms-documentos
+      # DOCUMENTOS_SERVICE apunta a ms-almacenamiento (backward compat)
+      DOCUMENTOS_SERVICE_HOST: ms-almacenamiento
       DOCUMENTOS_SERVICE_PORT: 3003
+      ALMACENAMIENTO_SERVICE_HOST: ms-almacenamiento
+      ALMACENAMIENTO_SERVICE_PORT: 3003
       REQUERIMIENTOS_SERVICE_HOST: ms-requerimientos
       REQUERIMIENTOS_SERVICE_PORT: 3004
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
-    volumes:
-      - uploads:/app/uploads
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
     depends_on:
       - ms-auth
       - ms-mantenedores
-      - ms-documentos
+      - ms-almacenamiento
       - ms-requerimientos
       - redis
     networks:
@@ -182,7 +242,11 @@ services:
 volumes:
   pgdata:
     driver: local
-  uploads:
+  seaweedfs-master-data:
+    driver: local
+  seaweedfs-volume-data:
+    driver: local
+  seaweedfs-filer-data:
     driver: local
 
 networks:
