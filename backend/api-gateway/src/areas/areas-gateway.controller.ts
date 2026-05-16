@@ -1,12 +1,11 @@
 import {
-  Controller, Get, Post, Put, Patch, Delete,
+  Controller, Get, Post, Put, Patch,
   Body, Param, Query, ParseIntPipe,
-  HttpCode, HttpStatus, Inject, HttpException,
-  UseGuards, Request,
+  Inject, UseGuards, Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { callService } from '../common/rpc.utils';
 import { SERVICE_NAMES, AREAS_PATTERNS, Role } from '../common/constants';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -24,12 +23,8 @@ export class AreasGatewayController {
   @ApiResponse({ status: 201, description: 'Área creada exitosamente' })
   @ApiResponse({ status: 404, description: 'Contratista no encontrado' })
   @ApiResponse({ status: 409, description: 'Ya existe un área con ese nombre para el contratista' })
-  async create(@Body() createDto: any) {
-    try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.CREATE, createDto));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+  async create(@Body() createDto: any, @Request() req: any) {
+    return callService(this.client.send(AREAS_PATTERNS.CREATE, { ...createDto, creadoPor: req.user.email }));
   }
 
   @Get()
@@ -38,17 +33,12 @@ export class AreasGatewayController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Listado de áreas' })
   async findAll(@Query('page') page?: string, @Query('limit') limit?: string, @Request() req?: any) {
-    const p = Number(page) || 1;
-    const l = Number(limit) || 10;
-
-    // Si es contratista, inyectar el contratistaId como filtro
     const filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
-
-    try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.FIND_ALL, { page: p, limit: l, contratistaId: filterContratistaId }));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(AREAS_PATTERNS.FIND_ALL, {
+      page: Number(page) || 1,
+      limit: Number(limit) || 10,
+      contratistaId: filterContratistaId,
+    }));
   }
 
   @Get('stats')
@@ -56,11 +46,7 @@ export class AreasGatewayController {
   @ApiResponse({ status: 200, description: 'Estadísticas de áreas' })
   async getStats(@Request() req: any) {
     const filterContratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
-    try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.STATS, { contratistaId: filterContratistaId }));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(AREAS_PATTERNS.STATS, { contratistaId: filterContratistaId }));
   }
 
   @Get(':id')
@@ -69,11 +55,7 @@ export class AreasGatewayController {
   @ApiResponse({ status: 200, description: 'Área encontrada' })
   @ApiResponse({ status: 404, description: 'Área no encontrada' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.FIND_ONE, { id }));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(AREAS_PATTERNS.FIND_ONE, { id }));
   }
 
   @Put(':id')
@@ -81,12 +63,8 @@ export class AreasGatewayController {
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Área actualizada' })
   @ApiResponse({ status: 404, description: 'Área o contratista no encontrado' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: any) {
-    try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.UPDATE, { id, dto: updateDto }));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+  async update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: any, @Request() req: any) {
+    return callService(this.client.send(AREAS_PATTERNS.UPDATE, { id, dto: { ...updateDto, actualizadoPor: req.user.email } }));
   }
 
   @Patch(':id/toggle')
@@ -94,11 +72,7 @@ export class AreasGatewayController {
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Estado del área actualizado' })
   @ApiResponse({ status: 409, description: 'No se puede desactivar: tiene proyectos asociados' })
-  async toggle(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await firstValueFrom(this.client.send(AREAS_PATTERNS.TOGGLE, { id }));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+  async toggle(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return callService(this.client.send(AREAS_PATTERNS.TOGGLE, { id, actualizadoPor: req.user.email }));
   }
 }

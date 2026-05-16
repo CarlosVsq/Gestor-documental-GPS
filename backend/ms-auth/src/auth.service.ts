@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,6 +6,22 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { Role } from './common/constants';
+
+interface CreateUserDto {
+  nombre: string;
+  email: string;
+  password: string;
+  rol?: Role;
+  contratistaId?: number;
+}
+
+interface UpdateUserDto {
+  nombre?: string;
+  email?: string;
+  password?: string;
+  rol?: Role;
+  contratistaId?: number;
+}
 
 /**
  * Servicio de Autenticación y Usuarios — HU-25/HU-19
@@ -82,7 +95,7 @@ export class AuthService {
     return result;
   }
 
-  async createUser(dto: any) {
+  async createUser(dto: CreateUserDto) {
     const existing = await this.userRepository.findOne({ where: { email: dto.email } });
     if (existing) {
       throw new RpcException({ statusCode: 409, message: `El email ${dto.email} ya está registrado` });
@@ -111,7 +124,7 @@ export class AuthService {
     return result;
   }
 
-  async updateUser(id: number, dto: any) {
+  async updateUser(id: number, dto: UpdateUserDto) {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) {
       throw new RpcException({ statusCode: 404, message: `Usuario #${id} no encontrado` });

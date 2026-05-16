@@ -21,4 +21,8 @@ export class UpdateAreaDto {
     @IsOptional()
     @IsNumber({}, { message: 'El contratistaId debe ser un número' })
     contratistaId?: number;
+
+    @IsOptional()
+    @IsString()
+    actualizadoPor?: string;
 }

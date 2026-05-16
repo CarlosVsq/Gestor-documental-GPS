@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 import { User } from './entities/user.entity';
+import { Role } from './common/constants';
 import * as bcrypt from 'bcrypt';
 
 // Mock bcrypt
@@ -198,7 +199,7 @@ describe('AuthService', () => {
       nombre: 'Nuevo Usuario',
       email: 'nuevo@sgd.cl',
       password: 'password123',
-      rol: 'colaborador',
+      rol: Role.COLABORADOR,
     };
 
     it('debería crear un usuario exitosamente', async () => {
@@ -227,6 +228,92 @@ describe('AuthService', () => {
       mockUserRepository.findOne.mockResolvedValue({ id: 1, email: createDto.email });
 
       await expect(service.createUser(createDto)).rejects.toThrow(RpcException);
+    });
+  });
+
+  // ================================================================
+  // UPDATE USER
+  // ================================================================
+  describe('updateUser', () => {
+    const existingUser = {
+      id: 1,
+      nombre: 'Usuario Existente',
+      email: 'existente@sgd.cl',
+      password: 'hash',
+      rol: 'colaborador',
+      contratistaId: null,
+      activo: true,
+    };
+
+    it('debería actualizar el nombre exitosamente', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser });
+      mockUserRepository.save.mockResolvedValue({ ...existingUser, nombre: 'Nuevo Nombre' });
+
+      const result = await service.updateUser(1, { nombre: 'Nuevo Nombre' });
+
+      expect(result).not.toHaveProperty('password');
+      expect(mockUserRepository.save).toHaveBeenCalled();
+    });
+
+    it('debería actualizar el email si no está en uso', async () => {
+      mockUserRepository.findOne
+        .mockResolvedValueOnce({ ...existingUser })   // buscar usuario por id
+        .mockResolvedValueOnce(null);                  // verificar email duplicado
+      mockUserRepository.save.mockResolvedValue({ ...existingUser, email: 'nuevo@sgd.cl' });
+
+      const result = await service.updateUser(1, { email: 'nuevo@sgd.cl' });
+
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('debería lanzar 404 si el usuario no existe', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.updateUser(999, { nombre: 'Test' })).rejects.toThrow(RpcException);
+    });
+
+    it('debería lanzar 409 si el nuevo email ya está registrado', async () => {
+      mockUserRepository.findOne
+        .mockResolvedValueOnce({ ...existingUser })
+        .mockResolvedValueOnce({ id: 2, email: 'otro@sgd.cl' }); // email en uso por otro usuario
+
+      await expect(service.updateUser(1, { email: 'otro@sgd.cl' })).rejects.toThrow(RpcException);
+    });
+
+    it('debería lanzar 400 si el rol es inválido', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser });
+
+      await expect(service.updateUser(1, { rol: 'superadmin_invalido' as unknown as Role })).rejects.toThrow(RpcException);
+    });
+
+    it('debería hashear la nueva contraseña si se provee', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('nuevo_hash');
+      mockUserRepository.save.mockResolvedValue({ ...existingUser });
+
+      await service.updateUser(1, { password: 'nuevaPassword123' });
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('nuevaPassword123', 10);
+    });
+
+    it('debería lanzar 400 si se asigna rol contratista sin contratistaId', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser, contratistaId: null });
+
+      await expect(
+        service.updateUser(1, { rol: Role.CONTRATISTA }),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('debería limpiar contratistaId al cambiar a un rol que no es contratista', async () => {
+      const contratistaUser = { ...existingUser, rol: 'contratista', contratistaId: 5 };
+      mockUserRepository.findOne.mockResolvedValue({ ...contratistaUser });
+      mockUserRepository.save.mockImplementation(async (u) => u);
+
+      const result = await service.updateUser(1, { rol: Role.COLABORADOR });
+
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ contratistaId: null }),
+      );
     });
   });
 

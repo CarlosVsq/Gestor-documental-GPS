@@ -18,4 +18,8 @@ export class CreateAreaDto {
 
     @IsNumber({}, { message: 'El contratistaId debe ser un número' })
     contratistaId: number;
+
+    @IsOptional()
+    @IsString()
+    creadoPor?: string;
 }

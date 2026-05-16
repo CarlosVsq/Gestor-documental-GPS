@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { DataSource } from 'typeorm';
-import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as crypto from 'crypto';
 import { SeaweedFsService } from '../seaweedfs/seaweedfs.service';
 import { DocumentosService } from '../documentos/documentos.service';

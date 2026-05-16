@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { RpcExceptionFilter } from './common/rpc-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,6 +16,9 @@ async function bootstrap() {
 
   // Prefijo global de la API
   app.setGlobalPrefix('api');
+
+  // Convierte errores TCP de microservicios en respuestas HTTP correctas
+  app.useGlobalFilters(new RpcExceptionFilter());
 
   // Validación global de DTOs
   app.useGlobalPipes(

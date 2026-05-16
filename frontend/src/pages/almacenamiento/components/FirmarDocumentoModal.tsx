@@ -3,6 +3,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { almacenamientoApi, type Documento } from '../../../api/almacenamiento';
+import { triggerBlobDownload } from '../utils';
 
 // Worker local vía Vite con sufijo para invalidar caché del navegador
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl + '?v=2';
@@ -185,13 +186,14 @@ export default function FirmarDocumentoModal({
     if (!firmaGuardada) { onNeedFirma(); return; }
     setLoading(true);
     try {
-      await almacenamientoApi.firmarDocumento(documento.id, firmaGuardada, {
+      const { blob, filename } = await almacenamientoApi.firmarDocumento(documento.id, firmaGuardada, {
         pagina: currentPage - 1,  // 0-indexed para el backend
         xPct: sigBox.xPct,
         yPct: sigBox.yPct,
         anchoPct: sigBox.wPct,
         altoPct: sigBox.hPct,
       });
+      triggerBlobDownload(blob, filename);
       onSuccess();
     } catch (err: any) {
       alert(err.message || 'Error al firmar el documento');

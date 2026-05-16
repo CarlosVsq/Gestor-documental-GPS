@@ -27,6 +27,9 @@ npm-debug.log*
 *.swp
 *.swo
 
+# Claude Code
+CLAUDE.md
+
 # Converted text files (temp)
 *.txt
 !README.md

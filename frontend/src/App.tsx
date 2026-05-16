@@ -11,7 +11,6 @@ import ProyectoForm from './components/ProyectoForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
-import DocumentosPage from './pages/DocumentosPage';
 import CategoriasPage from './pages/CategoriasPage';
 import SubtiposPage from './pages/SubtiposPage';
 import RequerimientosPage from './pages/RequerimientosPage';
@@ -24,7 +23,7 @@ import type { Area, CreateAreaDto, AreaStats } from './api/areas';
 import { proyectosApi } from './api/proyectos';
 import type { Proyecto, CreateProyectoDto, ProyectoStats } from './api/proyectos';
 
-export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'categorias' | 'subtipos' | 'requerimientos' | 'documentos' | 'almacenamiento' | 'reportes' | 'usuarios';
+export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'categorias' | 'subtipos' | 'requerimientos' | 'almacenamiento' | 'reportes' | 'usuarios';
 
 // ============================================================
 // Helpers reutilizables
@@ -49,7 +48,6 @@ const getPageHeaderInfo = (page: ActivePage) => {
     case 'categorias': return { title: 'Categorías', desc: 'Gestiona la taxonomía documental principal' };
     case 'subtipos': return { title: 'Subtipos', desc: 'Gestiona los subtipos documentales por categoría' };
     case 'usuarios': return { title: 'Administración de Usuarios', desc: 'Gestión de accesos y roles del Sistema de Gestión Documental' };
-    case 'documentos': return { title: 'Documentos (Legacy)', desc: 'Módulo anterior de documentos — usa Almacenamiento para la nueva versión' };
     case 'almacenamiento': return { title: 'Gestión de Documentos', desc: 'Expedientes digitales, carga de archivos y firma digital' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
   }
@@ -368,9 +366,6 @@ function AppLayout() {
 
       case 'almacenamiento':
         return <AlmacenamientoPage onNotify={showNotification} />;
-
-      case 'documentos':
-        return <DocumentosPage onNotify={showNotification} />;
 
       default:
         return (

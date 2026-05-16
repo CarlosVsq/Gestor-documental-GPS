@@ -1,7 +1,23 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
-import { AUTH_PATTERNS } from './common/constants';
+import { AUTH_PATTERNS, Role } from './common/constants';
+
+interface CreateUserPayload {
+  nombre: string;
+  email: string;
+  password: string;
+  rol?: Role;
+  contratistaId?: number;
+}
+
+interface UpdateUserPayload {
+  nombre?: string;
+  email?: string;
+  password?: string;
+  rol?: Role;
+  contratistaId?: number;
+}
 
 /**
  * Controller de Auth — Microservicio TCP
@@ -33,12 +49,12 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERNS.CREATE_USER)
-  async createUser(@Payload() dto: any) {
+  async createUser(@Payload() dto: CreateUserPayload) {
     return this.authService.createUser(dto);
   }
 
   @MessagePattern(AUTH_PATTERNS.UPDATE_USER)
-  async updateUser(@Payload() data: { id: number; dto: any }) {
+  async updateUser(@Payload() data: { id: number; dto: UpdateUserPayload }) {
     return this.authService.updateUser(data.id, data.dto);
   }
 

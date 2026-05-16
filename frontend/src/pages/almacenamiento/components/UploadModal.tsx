@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Documento } from '../../../api/almacenamiento';
 import { almacenamientoApi, ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES } from '../../../api/almacenamiento';
+import { formatBytes, getMimeIcon } from '../utils';
 import FirmaCanvas from './FirmaCanvas';
 
 interface UploadModalProps {
@@ -125,20 +126,6 @@ export default function UploadModal({
 
   const validCount = files.filter((f) => !f.error).length;
   const invalidCount = files.filter((f) => f.error).length;
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
-
-  const getMimeIcon = (mime: string) => {
-    if (mime.includes('pdf')) return '📄';
-    if (mime.includes('image')) return '🖼️';
-    if (mime.includes('word') || mime.includes('msword')) return '📝';
-    if (mime.includes('sheet') || mime.includes('excel')) return '📊';
-    return '📁';
-  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
