@@ -30,6 +30,7 @@ import {
 } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { callService } from '../common/rpc.utils';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -217,13 +218,7 @@ export class AlmacenamientoGatewayController {
   @Roles(Role.ADMIN, Role.SUPERVISOR, Role.COLABORADOR, Role.AUDITOR, Role.CONTRATISTA)
   @ApiOperation({ summary: 'Obtener todos los documentos de un Requerimiento' })
   async findByRequerimiento(@Param('reqId', ParseIntPipe) reqId: number) {
-    try {
-      return await firstValueFrom(
-        this.client.send(ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO, { requerimientoId: reqId }),
-      );
-    } catch (error) {
-      throw new HttpException(error?.message || 'Error', error?.statusCode || 500);
-    }
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO, { requerimientoId: reqId }));
   }
 
   // ─── Búsqueda por Metadatos (HU-09, HU-31) ───────────────────────────────
@@ -240,26 +235,19 @@ export class AlmacenamientoGatewayController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async search(@Query() query: any) {
-    try {
-      const filtros = {
-        q: query.q,
-        contratistaId: query.contratistaId ? parseInt(query.contratistaId) : undefined,
-        proyectoId: query.proyectoId ? parseInt(query.proyectoId) : undefined,
-        areaId: query.areaId ? parseInt(query.areaId) : undefined,
-        categoriaId: query.categoriaId ? parseInt(query.categoriaId) : undefined,
-        requerimientoId: query.requerimientoId ? parseInt(query.requerimientoId) : undefined,
-        estadoDocumento: query.estadoDocumento,
-        mimeType: query.mimeType,
-        page: query.page ? parseInt(query.page) : 1,
-        limit: query.limit ? parseInt(query.limit) : 20,
-      };
-
-      return await firstValueFrom(
-        this.client.send(ALMACENAMIENTO_PATTERNS.SEARCH, filtros),
-      );
-    } catch (error) {
-      throw new HttpException(error?.message || 'Error en búsqueda', error?.statusCode || 500);
-    }
+    const filtros = {
+      q: query.q,
+      contratistaId: query.contratistaId ? parseInt(query.contratistaId) : undefined,
+      proyectoId: query.proyectoId ? parseInt(query.proyectoId) : undefined,
+      areaId: query.areaId ? parseInt(query.areaId) : undefined,
+      categoriaId: query.categoriaId ? parseInt(query.categoriaId) : undefined,
+      requerimientoId: query.requerimientoId ? parseInt(query.requerimientoId) : undefined,
+      estadoDocumento: query.estadoDocumento,
+      mimeType: query.mimeType,
+      page: query.page ? parseInt(query.page) : 1,
+      limit: query.limit ? parseInt(query.limit) : 20,
+    };
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.SEARCH, filtros));
   }
 
   // ─── Árbol Jerárquico (HU-32) ─────────────────────────────────────────────
@@ -268,13 +256,7 @@ export class AlmacenamientoGatewayController {
   @Roles(Role.ADMIN, Role.SUPERVISOR, Role.COLABORADOR, Role.AUDITOR, Role.CONTRATISTA)
   @ApiOperation({ summary: 'HU-32: Árbol jerárquico Contratista→Área→Proyecto→Requerimiento→Docs' })
   async getTree() {
-    try {
-      return await firstValueFrom(
-        this.client.send(ALMACENAMIENTO_PATTERNS.GET_TREE, {}),
-      );
-    } catch (error) {
-      throw new HttpException(error?.message || 'Error', error?.statusCode || 500);
-    }
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.GET_TREE, {}));
   }
 
   // ─── Generar PDF Inmutable (HU-29) ────────────────────────────────────────
@@ -295,19 +277,13 @@ export class AlmacenamientoGatewayController {
     @Param('requerimientoId', ParseIntPipe) requerimientoId: number,
     @Req() req: any,
   ) {
-    try {
-      const { storagePath, firmaBase64 } = req.body || {};
-      return await firstValueFrom(
-        this.client.send(ALMACENAMIENTO_PATTERNS.GENERATE_PDF, {
-          requerimientoId,
-          firmadoPorId: req.user.id,
-          firmaBase64: firmaBase64 || null,
-          storagePath: storagePath || `/${requerimientoId}`,
-        }),
-      );
-    } catch (error) {
-      throw new HttpException(error?.message || 'Error generando PDF', error?.statusCode || 500);
-    }
+    const { storagePath, firmaBase64 } = req.body || {};
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.GENERATE_PDF, {
+      requerimientoId,
+      firmadoPorId: req.user.id,
+      firmaBase64: firmaBase64 || null,
+      storagePath: storagePath || `/${requerimientoId}`,
+    }));
   }
 
   // ─── Obtener uno / Eliminar ───────────────────────────────────────────────
@@ -316,23 +292,15 @@ export class AlmacenamientoGatewayController {
   @Roles(Role.ADMIN, Role.SUPERVISOR, Role.COLABORADOR, Role.AUDITOR, Role.CONTRATISTA)
   @ApiOperation({ summary: 'Obtener metadata de un documento por ID' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await firstValueFrom(this.client.send(ALMACENAMIENTO_PATTERNS.FIND_ONE, { id }));
-    } catch (error) {
-      throw new HttpException(error?.message || 'No encontrado', error?.statusCode || 404);
-    }
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.FIND_ONE, { id }));
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN, Role.SUPERVISOR)
   @ApiOperation({ summary: 'Eliminar documento (soft delete + borrado de SeaweedFS)' })
   async delete(@Param('id', ParseIntPipe) id: number) {
-    try {
-      await firstValueFrom(this.client.send(ALMACENAMIENTO_PATTERNS.DELETE, { id }));
-      return { message: 'Documento eliminado exitosamente' };
-    } catch (error) {
-      throw new HttpException(error?.message || 'Error al eliminar', error?.statusCode || 500);
-    }
+    await callService(this.client.send(ALMACENAMIENTO_PATTERNS.DELETE, { id }));
+    return { message: 'Documento eliminado exitosamente' };
   }
 
   // ─── Crear Expediente (HU-N4) ─────────────────────────────────────────────
@@ -345,18 +313,12 @@ export class AlmacenamientoGatewayController {
     if (!contratistaId || !areaId || !proyectoId || !codigoTicket) {
       throw new BadRequestException('Faltan campos obligatorios: contratistaId, areaId, proyectoId, codigoTicket');
     }
-    try {
-      return await firstValueFrom(
-        this.client.send(ALMACENAMIENTO_PATTERNS.CREATE_EXPEDIENTE, {
-          contratistaId: parseInt(contratistaId),
-          areaId: parseInt(areaId),
-          proyectoId: parseInt(proyectoId),
-          codigoTicket,
-        }),
-      );
-    } catch (error) {
-      throw new HttpException(error?.message || 'Error creando expediente', error?.statusCode || 500);
-    }
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.CREATE_EXPEDIENTE, {
+      contratistaId: parseInt(contratistaId),
+      areaId: parseInt(areaId),
+      proyectoId: parseInt(proyectoId),
+      codigoTicket,
+    }));
   }
 
   // ─── Cambiar estado de documento ──────────────────────────────────────────
@@ -383,16 +345,7 @@ export class AlmacenamientoGatewayController {
     if (!['BORRADOR', 'OFICIAL', 'OBSOLETO'].includes(body.estado)) {
       throw new BadRequestException('Estado inválido. Valores permitidos: BORRADOR, OFICIAL, OBSOLETO');
     }
-    try {
-      return await firstValueFrom(
-        this.client.send(ALMACENAMIENTO_PATTERNS.UPDATE_ESTADO, { id, estado: body.estado }),
-      );
-    } catch (error) {
-      throw new HttpException(
-        error?.message || error?.error?.message || 'Error al actualizar estado',
-        error?.statusCode || error?.error?.statusCode || 500,
-      );
-    }
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.UPDATE_ESTADO, { id, estado: body.estado }));
   }
 
   // ─── Firmar documento PDF (HU-11) ─────────────────────────────────────────

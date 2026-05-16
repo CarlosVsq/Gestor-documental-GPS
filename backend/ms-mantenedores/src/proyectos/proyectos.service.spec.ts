@@ -87,8 +87,8 @@ describe('ProyectosService', () => {
                 horasHombre: null,
                 estadoProyecto: 'Ejecución',
                 activo: true,
-                creadoPor: 'admin',
-                actualizadoPor: 'admin',
+                creadoPor: 'sistema',
+                actualizadoPor: 'sistema',
                 creadoEn: now,
                 actualizadoEn: now,
                 eliminadoEn: null,
@@ -104,8 +104,8 @@ describe('ProyectosService', () => {
             expect(mockProyectoRepository.create).toHaveBeenCalledWith({
                 ...createDto,
                 codigo: 'ING-001',
-                creadoPor: 'admin',
-                actualizadoPor: 'admin',
+                creadoPor: 'sistema',
+                actualizadoPor: 'sistema',
             });
         });
 
@@ -124,8 +124,8 @@ describe('ProyectosService', () => {
                 horasHombre: null,
                 estadoProyecto: 'Ejecución',
                 activo: true,
-                creadoPor: 'admin',
-                actualizadoPor: 'admin',
+                creadoPor: 'sistema',
+                actualizadoPor: 'sistema',
                 creadoEn: now,
                 actualizadoEn: now,
                 eliminadoEn: null,
@@ -157,8 +157,8 @@ describe('ProyectosService', () => {
                 horasHombre: null,
                 estadoProyecto: 'Ejecución',
                 activo: true,
-                creadoPor: 'admin',
-                actualizadoPor: 'admin',
+                creadoPor: 'sistema',
+                actualizadoPor: 'sistema',
                 creadoEn: now,
                 actualizadoEn: now,
                 eliminadoEn: null,
@@ -169,8 +169,11 @@ describe('ProyectosService', () => {
 
             await service.create(dtoConArea2);
 
+            // 'Área de Planificación' → normalize → 'Area de Planificacion'
+            // → filter out 'area' → ['de', 'Planificacion'] → join → 'dePlanificacion'
+            // → prefix = 'DEP'
             expect(mockProyectoRepository.create).toHaveBeenCalledWith(
-                expect.objectContaining({ codigo: 'ARE-001' }),
+                expect.objectContaining({ codigo: 'DEP-001' }),
             );
         });
 
@@ -223,8 +226,8 @@ describe('ProyectosService', () => {
                     horasHombre: null,
                     estadoProyecto: 'Ejecución',
                     activo: true,
-                    creadoPor: 'admin',
-                    actualizadoPor: 'admin',
+                    creadoPor: 'sistema',
+                    actualizadoPor: 'sistema',
                     creadoEn: now,
                     actualizadoEn: now,
                     eliminadoEn: null,
@@ -242,8 +245,8 @@ describe('ProyectosService', () => {
                     horasHombre: null,
                     estadoProyecto: 'Ejecución',
                     activo: true,
-                    creadoPor: 'admin',
-                    actualizadoPor: 'admin',
+                    creadoPor: 'sistema',
+                    actualizadoPor: 'sistema',
                     creadoEn: now,
                     actualizadoEn: now,
                     eliminadoEn: null,
@@ -294,8 +297,8 @@ describe('ProyectosService', () => {
                 horasHombre: null,
                 estadoProyecto: 'Ejecución',
                 activo: true,
-                creadoPor: 'admin',
-                actualizadoPor: 'admin',
+                creadoPor: 'sistema',
+                actualizadoPor: 'sistema',
                 creadoEn: now,
                 actualizadoEn: now,
                 eliminadoEn: null,
@@ -336,8 +339,8 @@ describe('ProyectosService', () => {
             horasHombre: null,
             estadoProyecto: 'Ejecución',
             activo: true,
-            creadoPor: 'admin',
-            actualizadoPor: 'admin',
+            creadoPor: 'sistema',
+            actualizadoPor: 'sistema',
             creadoEn: now,
             actualizadoEn: now,
             eliminadoEn: null,
@@ -402,8 +405,8 @@ describe('ProyectosService', () => {
                 horasHombre: null,
                 estadoProyecto: 'Ejecución',
                 activo: true,
-                creadoPor: 'admin',
-                actualizadoPor: 'admin',
+                creadoPor: 'sistema',
+                actualizadoPor: 'sistema',
                 creadoEn: now,
                 actualizadoEn: now,
                 eliminadoEn: null,

@@ -33,4 +33,8 @@ export class CreateProyectoDto {
         message: 'Estado debe ser: En Licitación, Ejecución, Finalizado o Suspendido'
     })
     estadoProyecto: 'En Licitación' | 'Ejecución' | 'Finalizado' | 'Suspendido';
+
+    @IsOptional()
+    @IsString()
+    creadoPor?: string;
 }

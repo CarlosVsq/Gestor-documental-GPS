@@ -41,24 +41,6 @@ export class DocumentosService {
     this.maxFileSizeBytes = getMaxFileSizeBytes();
   }
 
-  // ─── Validación ──────────────────────────────────────────────────────────
-
-  private validateFile(mimeType: string, sizeBytes: number): void {
-    if (!this.allowedMimeTypes.includes(mimeType)) {
-      throw new RpcException({
-        statusCode: 400,
-        message: `Tipo de archivo no permitido: ${mimeType}. Tipos aceptados: PDF, DOCX, XLSX, PNG, JPG, GIF, WEBP`,
-      });
-    }
-    if (sizeBytes > this.maxFileSizeBytes) {
-      const maxMB = this.maxFileSizeBytes / (1024 * 1024);
-      throw new RpcException({
-        statusCode: 413,
-        message: `El archivo excede el tamaño máximo permitido de ${maxMB}MB`,
-      });
-    }
-  }
-
   // ─── Procesamiento de imágenes ───────────────────────────────────────────
 
   /**
@@ -112,13 +94,25 @@ export class DocumentosService {
    * El file llega como base64 string desde el Gateway vía TCP.
    */
   async upload(dto: CreateDocumentoDto & { storagePath?: string }): Promise<Documento> {
-    this.validateFile(dto.mimeType, dto.tamañoBytes);
+    // Validate MIME type before processing (fast reject)
+    if (!this.allowedMimeTypes.includes(dto.mimeType)) {
+      throw new RpcException({
+        statusCode: 400,
+        message: `Tipo de archivo no permitido: ${dto.mimeType}. Tipos aceptados: PDF, DOCX, XLSX, PNG, JPG, GIF, WEBP`,
+      });
+    }
 
-    // Decodificar el archivo desde base64
     const rawBuffer = Buffer.from(dto.fileBase64, 'base64');
-
-    // Comprimir si es imagen
     const processedBuffer = await this.processBuffer(rawBuffer, dto.mimeType);
+
+    // Validate size against the final (post-compression) buffer
+    if (processedBuffer.length > this.maxFileSizeBytes) {
+      const maxMB = this.maxFileSizeBytes / (1024 * 1024);
+      throw new RpcException({
+        statusCode: 413,
+        message: `El archivo excede el tamaño máximo permitido de ${maxMB}MB`,
+      });
+    }
 
     // Hash SHA-256 del buffer final
     const sha256Hash = this.calculateSha256(processedBuffer);
@@ -228,8 +222,10 @@ export class DocumentosService {
    */
   async delete(id: number): Promise<{ success: boolean }> {
     const doc = await this.findOne(id);
-    await this.seaweedFsService.deleteFile(doc.pathSeaweed);
-    await this.documentosRepository.softDelete(id);
+    await Promise.all([
+      this.seaweedFsService.deleteFile(doc.pathSeaweed),
+      this.documentosRepository.softDelete(id),
+    ]);
     this.logger.log(`Documento eliminado: id=${id}`);
     return { success: true };
   }
@@ -269,6 +265,6 @@ export class DocumentosService {
 
     await this.documentosRepository.updateEstado(id, nuevoEstado);
     this.logger.log(`Documento #${id}: ${doc.estadoDocumento} → ${nuevoEstado}`);
-    return this.findOne(id);
+    return { ...doc, estadoDocumento: nuevoEstado };
   }
 }

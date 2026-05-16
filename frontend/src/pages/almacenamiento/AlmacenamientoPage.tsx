@@ -1,10 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   almacenamientoApi,
   type Documento,
+  type EstadoDocumento,
   type SearchFiltros,
 } from '../../api/almacenamiento';
+import { formatBytes, getMimeIcon, triggerBlobDownload } from './utils';
 import DocumentTree from './components/DocumentTree';
 import UploadModal from './components/UploadModal';
 import ConfigurarFirmaModal from './components/ConfigurarFirmaModal';
@@ -165,14 +167,17 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
     }
   }, [onNotify]);
 
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedSearch = useCallback((q: string) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => handleSearch({ q, page: 1, limit: 20 }), 300);
+  }, [handleSearch]);
+
   // ─── Descarga ───────────────────────────────────────────────────────────────
   const handleDownload = async (doc: Documento) => {
     try {
       const { blob, filename } = await almacenamientoApi.downloadBlob(doc.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
+      triggerBlobDownload(blob, filename);
     } catch {
       onNotify('Error al descargar el documento', 'error');
     }
@@ -187,8 +192,10 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
         try {
           await almacenamientoApi.delete(doc.id);
           onNotify('Documento eliminado correctamente', 'success');
-          if (selectedReq) handleSelectRequerimiento(selectedReq.id, selectedReq.codigoTicket, selectedReq.storagePath);
-          loadTree();
+          await Promise.all([
+            selectedReq ? handleSelectRequerimiento(selectedReq.id, selectedReq.codigoTicket, selectedReq.storagePath) : Promise.resolve(),
+            loadTree(),
+          ]);
         } catch {
           onNotify('Error al eliminar el documento', 'error');
         }
@@ -198,14 +205,15 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
 
   // ─── Cambiar estado ─────────────────────────────────────────────────────────
   const handleUpdateEstado = (doc: Documento) => {
-    const siguiente = doc.estadoDocumento === 'BORRADOR' ? 'OFICIAL' : 'OBSOLETO';
+    const siguiente = SIGUIENTE_ESTADO[doc.estadoDocumento];
+    if (!siguiente) return;
     showConfirm(
       'Cambiar estado',
       `¿Cambiar "${doc.nombreOriginal}" de ${doc.estadoDocumento} → ${siguiente}?`,
       async () => {
         setUpdatingEstado(doc.id);
         try {
-          const updated = await almacenamientoApi.updateEstado(doc.id, siguiente as any);
+          const updated = await almacenamientoApi.updateEstado(doc.id, siguiente);
           setReqDocumentos((prev) => prev.map((d) => d.id === doc.id ? updated : d));
           if (view === 'search' && searchResults) {
             setSearchResults((prev) => prev ? {
@@ -214,6 +222,7 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
             } : null);
           }
           onNotify(`Estado actualizado: ${siguiente}`, 'success');
+          loadTree();
         } catch (err: any) {
           onNotify(err.message || 'Error al cambiar estado', 'error');
         } finally {
@@ -232,8 +241,10 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
         selectedReq.id, selectedReq.storagePath, firmaGuardada || undefined,
       );
       onNotify(`PDF inmutable generado · ID: ${documentoId} · SHA256: ${sha256Hash.substring(0, 16)}…`, 'success');
-      handleSelectRequerimiento(selectedReq.id, selectedReq.codigoTicket, selectedReq.storagePath);
-      loadTree();
+      await Promise.all([
+        handleSelectRequerimiento(selectedReq.id, selectedReq.codigoTicket, selectedReq.storagePath),
+        loadTree(),
+      ]);
     } catch (err: any) {
       onNotify(err.message || 'Error al generar PDF', 'error');
     } finally {
@@ -242,16 +253,20 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
   };
 
   // ─── Helpers de render ──────────────────────────────────────────────────────
-  const formatBytes = (b: number) => b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(2)} MB`;
-  const getMimeIcon = (mime: string) =>
-    mime.includes('pdf') ? '📄' : mime.includes('image') ? '🖼️' : mime.includes('word') ? '📝' : mime.includes('sheet') ? '📊' : '📁';
-
-  const SIGUIENTE_ESTADO: Record<string, string> = { BORRADOR: 'OFICIAL', OFICIAL: 'OBSOLETO' };
-
-  const estadoBadge = (estado: string) => {
-    const cls = estado === 'BORRADOR' ? 'badge-warning' : estado === 'OFICIAL' ? 'badge-success' : 'badge-gray';
-    return <span className={`badge ${cls}`}>{estado}</span>;
+  const SIGUIENTE_ESTADO: Partial<Record<EstadoDocumento, EstadoDocumento>> = {
+    BORRADOR: 'OFICIAL',
+    OFICIAL: 'OBSOLETO',
   };
+
+  const ESTADO_BADGE_CLASS: Record<EstadoDocumento, string> = {
+    BORRADOR: 'badge-warning',
+    OFICIAL: 'badge-success',
+    OBSOLETO: 'badge-gray',
+  };
+
+  const estadoBadge = (estado: EstadoDocumento) => (
+    <span className={`badge ${ESTADO_BADGE_CLASS[estado]}`}>{estado}</span>
+  );
 
   const renderDocumentList = (docs: Documento[], emptyMsg: string) => {
     if (docs.length === 0) {
@@ -265,10 +280,8 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
       );
     }
     
-    // Ordenar los documentos: más recientes primero, y paginarlos
-    const sortedDocs = [...docs].sort((a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime());
-    const totalPages = Math.ceil(sortedDocs.length / DOCS_PER_PAGE);
-    const paginatedDocs = sortedDocs.slice((docPage - 1) * DOCS_PER_PAGE, docPage * DOCS_PER_PAGE);
+    const totalPages = Math.ceil(docs.length / DOCS_PER_PAGE);
+    const paginatedDocs = docs.slice((docPage - 1) * DOCS_PER_PAGE, docPage * DOCS_PER_PAGE);
 
     return (
       <div className="doc-table-wrapper">
@@ -388,7 +401,7 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
               style={{ paddingLeft: '30px', height: '34px', fontSize: '0.83rem' }}
               onChange={(e) => {
                 const q = e.target.value;
-                if (q.length >= 2) handleSearch({ q, page: 1, limit: 20 });
+                if (q.length >= 2) debouncedSearch(q);
                 else if (q.length === 0) { setView('tree'); setSearchResults(null); }
               }}
             />

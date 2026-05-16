@@ -2,6 +2,14 @@ import { authHeaders } from './auth';
 
 const API_BASE = '/api/almacenamiento';
 
+export type EstadoDocumento = 'BORRADOR' | 'OFICIAL' | 'OBSOLETO';
+
+function multipartHeaders(): Record<string, string> {
+  const h = authHeaders();
+  delete h['Content-Type'];
+  return h;
+}
+
 // Tipos MIME permitidos (sincronizado con ALLOWED_MIME_TYPES del backend)
 // Para agregar tipos: edita también la variable ALLOWED_MIME_TYPES en .env
 export const ALLOWED_MIME_TYPES = [
@@ -26,7 +34,7 @@ export interface Documento {
   tamañoBytes: number;
   sha256Hash: string | null;
   requerimientoId: number;
-  estadoDocumento: 'BORRADOR' | 'OFICIAL' | 'OBSOLETO';
+  estadoDocumento: EstadoDocumento;
   version: number;
   autorId: number;
   creadoPor: string;
@@ -52,7 +60,7 @@ export interface SearchFiltros {
   areaId?: number;
   categoriaId?: number;
   requerimientoId?: number;
-  estadoDocumento?: 'BORRADOR' | 'OFICIAL' | 'OBSOLETO';
+  estadoDocumento?: EstadoDocumento;
   page?: number;
   limit?: number;
 }
@@ -84,12 +92,9 @@ export const almacenamientoApi = {
     formData.append('requerimientoId', requerimientoId.toString());
     if (storagePath) formData.append('storagePath', storagePath);
 
-    const headers = authHeaders();
-    delete headers['Content-Type'];
-
     const res = await fetch(`${API_BASE}/upload`, {
       method: 'POST',
-      headers,
+      headers: multipartHeaders(),
       body: formData,
     });
 
@@ -114,14 +119,11 @@ export const almacenamientoApi = {
     formData.append('requerimientoId', requerimientoId.toString());
     if (storagePath) formData.append('storagePath', storagePath);
 
-    const headers = authHeaders();
-    delete headers['Content-Type'];
-
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${API_BASE}/upload-bulk`);
 
-      Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v as string));
+      Object.entries(multipartHeaders()).forEach(([k, v]) => xhr.setRequestHeader(k, v as string));
 
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable && onProgress) onProgress(e.loaded, e.total);
@@ -228,7 +230,7 @@ export const almacenamientoApi = {
   /**
    * Cambiar estado de documento: BORRADOR → OFICIAL → OBSOLETO
    */
-  async updateEstado(id: number, estado: 'BORRADOR' | 'OFICIAL' | 'OBSOLETO'): Promise<Documento> {
+  async updateEstado(id: number, estado: EstadoDocumento): Promise<Documento> {
     const res = await fetch(`${API_BASE}/${id}/estado`, {
       method: 'PATCH',
       headers: authHeaders(),
@@ -255,25 +257,19 @@ export const almacenamientoApi = {
       anchoPct?: number;
       altoPct?: number;
     },
-  ): Promise<void> {
-    const headers = authHeaders();
+  ): Promise<{ blob: Blob; filename: string }> {
     const res = await fetch(`${API_BASE}/${id}/firmar`, {
       method: 'POST',
-      headers,
+      headers: authHeaders(),
       body: JSON.stringify({ firmaBase64, ...(posicion || {}) }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Error al firmar documento' }));
       throw new Error(err.message || 'Error al firmar documento');
     }
-    // Disparar descarga del PDF firmado
     const disposition = res.headers.get('content-disposition') || '';
     const match = disposition.match(/filename="?([^"]+)"?/);
     const filename = match ? decodeURIComponent(match[1]) : 'documento_firmado.pdf';
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
+    return { blob: await res.blob(), filename };
   },
 };

@@ -28,4 +28,8 @@ export class UpdateContratistaDto {
   @IsOptional()
   @IsEnum(['read', 'write', 'read_write', 'admin'])
   permisosObjectFS?: 'read' | 'write' | 'read_write' | 'admin';
+
+  @IsOptional()
+  @IsString()
+  actualizadoPor?: string;
 }

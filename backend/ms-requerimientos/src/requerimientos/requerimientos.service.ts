@@ -6,7 +6,6 @@ import { Requerimiento, EstadoRequerimiento, PrioridadRequerimiento } from './re
 import { CreateRequerimientoDto } from './dto/create-requerimiento.dto';
 import { UpdateEstadoDto } from './dto/update-estado.dto';
 import { ALMACENAMIENTO_CLIENT } from '../common/constants';
-import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class RequerimientosService {

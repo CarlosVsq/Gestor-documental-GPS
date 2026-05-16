@@ -3,22 +3,28 @@ import { DocumentosRepository } from './documentos.repository';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Documento } from './entities/documento.entity';
 import { DataSource } from 'typeorm';
+import { EstadoDocumento } from '../common/constants';
 
-describe('DocumentosRepository - getTree()', () => {
+describe('DocumentosRepository', () => {
   let repository: DocumentosRepository;
   let mockDataSource: any;
+  let mockRepo: any;
 
   beforeEach(async () => {
     // Mock DataSource
     mockDataSource = {
       query: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
 
     // Mock Repository
-    const mockRepo = {
+    mockRepo = {
       find: jest.fn(),
       findOne: jest.fn(),
       save: jest.fn(),
+      softDelete: jest.fn(),
+      count: jest.fn(),
+      update: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -160,6 +166,184 @@ describe('DocumentosRepository - getTree()', () => {
 
       expect(result[0].contratistaNombre).toBeNull();
       expect(result).toHaveLength(1);
+    });
+  });
+
+  // ─── findById() ───────────────────────────────────────────────────────────
+
+  describe('findById', () => {
+    it('retorna el documento cuando existe', async () => {
+      const doc = { id: 1, nombreOriginal: 'archivo.pdf' };
+      mockRepo.findOne.mockResolvedValue(doc);
+
+      const result = await repository.findById(1);
+
+      expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual(doc);
+    });
+
+    it('retorna null cuando el documento no existe', async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      const result = await repository.findById(999);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // ─── findByRequerimiento() ────────────────────────────────────────────────
+
+  describe('findByRequerimiento', () => {
+    it('retorna documentos del requerimiento ordenados por versión DESC', async () => {
+      const docs = [
+        { id: 2, requerimientoId: 1, version: 2 },
+        { id: 1, requerimientoId: 1, version: 1 },
+      ];
+      mockRepo.find.mockResolvedValue(docs);
+
+      const result = await repository.findByRequerimiento(1);
+
+      expect(mockRepo.find).toHaveBeenCalledWith({
+        where: { requerimientoId: 1 },
+        order: { version: 'DESC', creadoEn: 'DESC' },
+      });
+      expect(result).toEqual(docs);
+    });
+
+    it('retorna array vacío si el requerimiento no tiene documentos', async () => {
+      mockRepo.find.mockResolvedValue([]);
+
+      const result = await repository.findByRequerimiento(999);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ─── softDelete() ─────────────────────────────────────────────────────────
+
+  describe('softDelete', () => {
+    it('llama a repo.softDelete con el id correcto', async () => {
+      mockRepo.softDelete.mockResolvedValue({ affected: 1 });
+
+      await repository.softDelete(42);
+
+      expect(mockRepo.softDelete).toHaveBeenCalledWith(42);
+    });
+  });
+
+  // ─── countByRequerimiento() ───────────────────────────────────────────────
+
+  describe('countByRequerimiento', () => {
+    it('retorna el conteo de documentos del requerimiento', async () => {
+      mockRepo.count.mockResolvedValue(5);
+
+      const result = await repository.countByRequerimiento(1);
+
+      expect(mockRepo.count).toHaveBeenCalledWith({ where: { requerimientoId: 1 } });
+      expect(result).toBe(5);
+    });
+
+    it('retorna 0 si no hay documentos', async () => {
+      mockRepo.count.mockResolvedValue(0);
+
+      const result = await repository.countByRequerimiento(999);
+
+      expect(result).toBe(0);
+    });
+  });
+
+  // ─── updateEstado() ───────────────────────────────────────────────────────
+
+  describe('updateEstado', () => {
+    it('llama a repo.update con el id y el nuevo estado', async () => {
+      mockRepo.update.mockResolvedValue({ affected: 1 });
+
+      await repository.updateEstado(1, EstadoDocumento.OFICIAL);
+
+      expect(mockRepo.update).toHaveBeenCalledWith(1, { estadoDocumento: EstadoDocumento.OFICIAL });
+    });
+  });
+
+  // ─── search() ─────────────────────────────────────────────────────────────
+
+  describe('search', () => {
+    const buildMockQB = (countResult = 0, rawResult: any[] = []) => ({
+      select: jest.fn().mockReturnThis(),
+      from: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      getCount: jest.fn().mockResolvedValue(countResult),
+      getRawMany: jest.fn().mockResolvedValue(rawResult),
+    });
+
+    it('retorna data y total cuando hay resultados', async () => {
+      const mockDocs = [{ id: 1, nombreOriginal: 'archivo.pdf' }];
+      const mockQB = buildMockQB(1, mockDocs);
+      mockDataSource.createQueryBuilder.mockReturnValue(mockQB);
+
+      const result = await repository.search({ requerimientoId: 1 });
+
+      expect(result.total).toBe(1);
+      expect(result.data).toEqual(mockDocs);
+    });
+
+    it('aplica filtro por requerimientoId cuando se provee', async () => {
+      const mockQB = buildMockQB(0, []);
+      mockDataSource.createQueryBuilder.mockReturnValue(mockQB);
+
+      await repository.search({ requerimientoId: 5 });
+
+      expect(mockQB.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('"requerimientoId"'),
+        expect.objectContaining({ reqId: 5 }),
+      );
+    });
+
+    it('aplica filtro por estadoDocumento cuando se provee', async () => {
+      const mockQB = buildMockQB(0, []);
+      mockDataSource.createQueryBuilder.mockReturnValue(mockQB);
+
+      await repository.search({ estadoDocumento: EstadoDocumento.OFICIAL });
+
+      expect(mockQB.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('"estadoDocumento"'),
+        expect.objectContaining({ estado: EstadoDocumento.OFICIAL }),
+      );
+    });
+
+    it('aplica búsqueda por texto (q) en nombreOriginal', async () => {
+      const mockQB = buildMockQB(0, []);
+      mockDataSource.createQueryBuilder.mockReturnValue(mockQB);
+
+      await repository.search({ q: 'contrato' });
+
+      expect(mockQB.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('"nombreOriginal"'),
+        expect.objectContaining({ q: '%contrato%' }),
+      );
+    });
+
+    it('usa paginación por defecto (page=1, limit=20) cuando no se especifica', async () => {
+      const mockQB = buildMockQB(0, []);
+      mockDataSource.createQueryBuilder.mockReturnValue(mockQB);
+
+      await repository.search({});
+
+      expect(mockQB.limit).toHaveBeenCalledWith(20);
+      expect(mockQB.offset).toHaveBeenCalledWith(0);
+    });
+
+    it('limita el máximo de resultados por página a 100', async () => {
+      const mockQB = buildMockQB(0, []);
+      mockDataSource.createQueryBuilder.mockReturnValue(mockQB);
+
+      await repository.search({ limit: 9999 });
+
+      expect(mockQB.limit).toHaveBeenCalledWith(100);
     });
   });
 });

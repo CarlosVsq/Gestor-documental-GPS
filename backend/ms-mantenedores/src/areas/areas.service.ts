@@ -45,8 +45,8 @@ export class AreasService {
 
         const area = this.areaRepository.create({
             ...createDto,
-            creadoPor: 'admin',
-            actualizadoPor: 'admin',
+            creadoPor: createDto.creadoPor || 'sistema',
+            actualizadoPor: createDto.creadoPor || 'sistema',
         });
         return this.areaRepository.save(area);
     }
@@ -106,12 +106,12 @@ export class AreasService {
         if (updateDto.contratistaId !== undefined) {
             area.contratista = { id: updateDto.contratistaId } as any;
         }
-        area.actualizadoPor = 'admin';
+        area.actualizadoPor = updateDto.actualizadoPor || 'sistema';
         await this.areaRepository.save(area);
         return this.findOne(id);
     }
 
-    async toggle(id: number): Promise<{ activo: boolean }> {
+    async toggle(id: number, actualizadoPor?: string): Promise<{ activo: boolean }> {
         const area = await this.findOne(id);
 
         // Verificar proyectos asociados (activos o inactivos, incluyendo soft-deleted)
@@ -127,7 +127,7 @@ export class AreasService {
         }
 
         area.activo = !area.activo;
-        area.actualizadoPor = 'admin';
+        area.actualizadoPor = actualizadoPor || 'sistema';
         await this.areaRepository.save(area);
         return { activo: area.activo };
     }

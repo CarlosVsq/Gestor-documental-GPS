@@ -13,7 +13,6 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
-  HttpException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,7 +21,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { callService } from '../common/rpc.utils';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -46,16 +45,7 @@ export class AuthGatewayController {
   @ApiResponse({ status: 200, description: 'Login exitoso. Retorna JWT y datos del usuario.' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() loginDto: any) {
-    try {
-      return await firstValueFrom(
-        this.authClient.send(AUTH_PATTERNS.LOGIN, loginDto),
-      );
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Error de autenticación',
-        error.statusCode || 500,
-      );
-    }
+    return callService(this.authClient.send(AUTH_PATTERNS.LOGIN, loginDto));
   }
 
   @Get('profile')
@@ -66,16 +56,7 @@ export class AuthGatewayController {
   @ApiResponse({ status: 200, description: 'Perfil del usuario' })
   @ApiResponse({ status: 401, description: 'Token inválido o expirado' })
   async getProfile(@Request() req: any) {
-    try {
-      return await firstValueFrom(
-        this.authClient.send(AUTH_PATTERNS.PROFILE, { userId: req.user.id }),
-      );
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Error al obtener perfil',
-        error.statusCode || 500,
-      );
-    }
+    return callService(this.authClient.send(AUTH_PATTERNS.PROFILE, { userId: req.user.id }));
   }
 
   @Get('users')
@@ -85,13 +66,7 @@ export class AuthGatewayController {
   @ApiOperation({ summary: 'Listar todos los usuarios' })
   @ApiResponse({ status: 200, description: 'Lista de usuarios' })
   async findAll() {
-    try {
-      return await firstValueFrom(
-        this.authClient.send(AUTH_PATTERNS.FIND_ALL_USERS, {}),
-      );
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.authClient.send(AUTH_PATTERNS.FIND_ALL_USERS, {}));
   }
 
   @Get('users/:id')
@@ -102,13 +77,7 @@ export class AuthGatewayController {
   @ApiResponse({ status: 200, description: 'Usuario encontrado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await firstValueFrom(
-        this.authClient.send(AUTH_PATTERNS.FIND_ONE_USER, { id }),
-      );
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.authClient.send(AUTH_PATTERNS.FIND_ONE_USER, { id }));
   }
 
   @Post('users')
@@ -119,13 +88,7 @@ export class AuthGatewayController {
   @ApiResponse({ status: 201, description: 'Usuario creado' })
   @ApiResponse({ status: 409, description: 'Email ya registrado' })
   async createUser(@Body() dto: any) {
-    try {
-      return await firstValueFrom(
-        this.authClient.send(AUTH_PATTERNS.CREATE_USER, dto),
-      );
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.authClient.send(AUTH_PATTERNS.CREATE_USER, dto));
   }
 
   @Put('users/:id')
@@ -135,17 +98,8 @@ export class AuthGatewayController {
   @ApiOperation({ summary: 'Actualizar un usuario' })
   @ApiResponse({ status: 200, description: 'Usuario actualizado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  async updateUser(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: any,
-  ) {
-    try {
-      return await firstValueFrom(
-        this.authClient.send(AUTH_PATTERNS.UPDATE_USER, { id, dto }),
-      );
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+  async updateUser(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
+    return callService(this.authClient.send(AUTH_PATTERNS.UPDATE_USER, { id, dto }));
   }
 
   @Patch('users/:id/toggle')
@@ -156,12 +110,6 @@ export class AuthGatewayController {
   @ApiResponse({ status: 200, description: 'Estado del usuario cambiado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async toggleActive(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await firstValueFrom(
-        this.authClient.send(AUTH_PATTERNS.TOGGLE_USER, { id }),
-      );
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.authClient.send(AUTH_PATTERNS.TOGGLE_USER, { id }));
   }
 }

@@ -38,4 +38,8 @@ export class UpdateProyectoDto {
         message: 'Estado debe ser: En Licitación, Ejecución, Finalizado o Suspendido'
     })
     estadoProyecto?: 'En Licitación' | 'Ejecución' | 'Finalizado' | 'Suspendido';
+
+    @IsOptional()
+    @IsString()
+    actualizadoPor?: string;
 }

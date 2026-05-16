@@ -10,7 +10,6 @@ import { AuthGatewayModule } from './auth/auth-gateway.module';
 import { ContratistasGatewayModule } from './contratistas/contratistas-gateway.module';
 import { AreasGatewayModule } from './areas/areas-gateway.module';
 import { ProyectosGatewayModule } from './proyectos/proyectos-gateway.module';
-import { DocumentosGatewayModule } from './documentos/documentos-gateway.module';
 import { AlmacenamientoGatewayModule } from './almacenamiento/almacenamiento-gateway.module';
 
 import { TcpClientsModule } from './common/tcp-clients.module';
@@ -43,7 +42,6 @@ import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gat
     ContratistasGatewayModule,
     AreasGatewayModule,
     ProyectosGatewayModule,
-    DocumentosGatewayModule,
     CategoriasGatewayModule,
     SubtiposGatewayModule,
     RequerimientosGatewayModule,

@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
 import { RequerimientosService } from './requerimientos.service';
 import { Requerimiento, EstadoRequerimiento } from './requerimiento.entity';
+import { ALMACENAMIENTO_CLIENT } from '../common/constants';
 
 /**
  * Test unitario del servicio de Requerimientos (HU-N1, HU-N2)
@@ -18,11 +19,16 @@ describe('RequerimientosService', () => {
     findAndCount: jest.fn(),
   };
 
+  const mockAlmacenamientoClient = {
+    send: jest.fn().mockReturnValue({ subscribe: jest.fn() }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RequerimientosService,
         { provide: getRepositoryToken(Requerimiento), useValue: mockRepository },
+        { provide: ALMACENAMIENTO_CLIENT, useValue: mockAlmacenamientoClient },
       ],
     }).compile();
 
