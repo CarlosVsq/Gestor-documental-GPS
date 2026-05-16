@@ -83,9 +83,6 @@ services:
     networks:
       - sgd-network
 
-  # --- [DEPRECADO] Microservicio de Documentos (reemplazado por ms-almacenamiento) ---
-  # ms-documentos NO se levanta. Ver backend/ms-documentos/DEPRECATED.md
-
   # --- SeaweedFS Master (coordinador del cluster) ---
   seaweedfs-master:
     image: chrislusf/seaweedfs:latest
@@ -133,7 +130,7 @@ services:
     networks:
       - sgd-network
 
-  # --- Microservicio de Almacenamiento (TCP :3003) — reemplaza ms-documentos ---
+  # --- Microservicio de Almacenamiento (TCP :3003) ---
   ms-almacenamiento:
     build:
       context: ./backend

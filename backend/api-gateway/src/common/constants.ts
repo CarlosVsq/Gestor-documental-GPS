@@ -14,7 +14,6 @@ export enum Role {
 export const SERVICE_NAMES = {
   AUTH: 'AUTH_SERVICE',
   MANTENEDORES: 'MANTENEDORES_SERVICE',
-  DOCUMENTOS: 'DOCUMENTOS_SERVICE',      // @deprecated — usa ALMACENAMIENTO
   REQUERIMIENTOS: 'REQUERIMIENTOS_SERVICE',
   ALMACENAMIENTO: 'ALMACENAMIENTO_SERVICE',
 } as const;
@@ -58,11 +57,6 @@ export const PROYECTOS_PATTERNS = {
   STATS: 'proyectos.stats',
 } as const;
 
-export const DOCUMENTOS_PATTERNS = {
-  CREATE: 'documentos.create',
-  FIND_ALL: 'documentos.findAll',
-  GET_FILE_PATH: 'documentos.getFilePath',
-} as const;
 
 export const CATEGORIAS_PATTERNS = {
   CREATE: 'categorias.create',
