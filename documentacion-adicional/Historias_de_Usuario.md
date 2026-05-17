@@ -258,7 +258,7 @@ Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o m�
 
 ### Pendientes prioritarios para una próxima iteración
 
-1. **HU-19 + HU-N7** (validaciones de transición): cambios chicos y de alto valor en `requerimientos.service.ts` — solo requieren llamar a `ms-almacenamiento` antes de cambiar estado.
+1. **HU-19** (validación de cierre): bloquear CERRADO si no todos los documentos están firmados. Bloqueado por un cambio previo: la entidad `Documento` no persiste estado de firma (`pdf.service.ts:firmarDocumento` solo devuelve el PDF). Requiere añadir `firmadoEn`/`firmadoPorId` y persistir desde el flujo de firma antes de poder validar el cierre. (HU-N7 ya implementada en `requerimientos.service.ts:updateState`.)
 2. **HU-N8** (reporte de cierre): puede reutilizar `pdf.service.ts` y `metadataAudit` existente.
 3. **HU-18 + HU-16** (audit log inmutable): tabla nueva + interceptor global en el gateway.
 4. **HU-34/HU-35** (notificaciones): requieren infraestructura nueva (WebSocket o tabla `notificaciones` + polling).
@@ -273,7 +273,7 @@ El orden se optimiza para maximizar HUs cerradas por unidad de esfuerzo. El movi
 
 | Sprint | Bloque | HUs cerradas | Esfuerzo |
 |--------|--------|--------------|----------|
-| 1 | Cadena D (sin HU-N8): **HU-N7 + HU-19** | 2 | 1–2 días |
+| ~~1~~ | ~~Cadena D (sin HU-N8): **HU-N7 + HU-19**~~ | ~~2~~ | HU-N7 ✅ implementada (2026-05-17). HU-19 requiere primero persistir estado de firma — se reubica más adelante. |
 | 2 | Cadena A: **HU-18** | HU-18, HU-16, HU-33 (parcial) | 3–4 días |
 | 3 | **HU-N8** (con audit log ya disponible) | 1 + cierre 100% de HU-33 | 1 día |
 | 4 | Cadena C (recharts + endpoint `/stats`) | HU-23, HU-21, HU-15 | 3 días |
