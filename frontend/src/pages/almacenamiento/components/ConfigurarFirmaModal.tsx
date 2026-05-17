@@ -1,42 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import FirmaCanvas from './FirmaCanvas';
+import FirmaUpload from './FirmaUpload';
+import { useFirmaPersistida } from '../hooks/useFirmaPersistida';
+
+type Modo = 'dibujar' | 'subir';
 
 interface ConfigurarFirmaModalProps {
   userId: number;
   onClose: () => void;
-  onSaved: (dataUrl: string) => void;
+  onSaved: () => void;
 }
 
 /**
  * ConfigurarFirmaModal — Modal para dibujar y persistir la firma del usuario (HU-11)
  *
- * La firma se guarda en localStorage bajo la clave sgd_firma_{userId}.
- * Persiste entre sesiones. Se puede actualizar o eliminar aquí mismo.
+ * La persistencia se delega a `useFirmaPersistida`, garantizando que esta vista,
+ * el expediente y el UploadModal compartan la misma fuente de datos.
  */
 export default function ConfigurarFirmaModal({ userId, onClose, onSaved }: ConfigurarFirmaModalProps) {
-  const STORAGE_KEY = `sgd_firma_${userId}`;
-  const [currentFirma, setCurrentFirma] = useState<string | null>(null);
+  const { firma: currentFirma, saveFirma, removeFirma } = useFirmaPersistida(userId);
   const [newFirma, setNewFirma] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setCurrentFirma(stored);
-  }, [STORAGE_KEY]);
+  const [modo, setModo] = useState<Modo>('dibujar');
 
   const handleSave = () => {
     if (!newFirma) return;
-    localStorage.setItem(STORAGE_KEY, newFirma);
-    setCurrentFirma(newFirma);
+    saveFirma(newFirma);
     setSaved(true);
-    onSaved(newFirma);
+    onSaved();
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleDelete = () => {
-    if (!confirm('¿Eliminar tu firma guardada? Tendrás que dibujarla de nuevo.')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    setCurrentFirma(null);
+    if (!confirm('¿Eliminar tu firma guardada? Tendrás que dibujarla o subirla de nuevo.')) return;
+    removeFirma();
     setNewFirma(null);
   };
 
@@ -85,17 +82,57 @@ export default function ConfigurarFirmaModal({ userId, onClose, onSaved }: Confi
             </div>
           )}
 
-          {/* Canvas para nueva firma */}
+          {/* Selector de modo: dibujar vs subir */}
+          <div role="tablist" style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--gray-200)', marginBottom: '16px' }}>
+            {(['dibujar', 'subir'] as Modo[]).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={modo === tab}
+                onClick={() => {
+                  setModo(tab);
+                  setNewFirma(null);
+                }}
+                style={{
+                  padding: '10px 16px',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: modo === tab ? 600 : 500,
+                  color: modo === tab ? 'var(--accent-700)' : 'var(--gray-600)',
+                  borderBottom: `2px solid ${modo === tab ? 'var(--accent-600)' : 'transparent'}`,
+                  marginBottom: '-1px',
+                }}
+              >
+                {tab === 'dibujar' ? '✍️ Dibujar' : '📤 Subir imagen'}
+              </button>
+            ))}
+          </div>
+
           <div style={{ marginBottom: '4px' }}>
             <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
-              {currentFirma ? 'Dibuja una nueva firma para reemplazar la actual:' : 'Dibuja tu firma a continuación:'}
+              {modo === 'dibujar'
+                ? currentFirma
+                  ? 'Dibuja una nueva firma para reemplazar la actual:'
+                  : 'Dibuja tu firma a continuación:'
+                : currentFirma
+                  ? 'Sube una imagen para reemplazar la firma actual:'
+                  : 'Sube una imagen PNG o JPG con tu firma:'}
             </p>
-            <FirmaCanvas
-              onSave={(dataUrl) => setNewFirma(dataUrl)}
-              onClear={() => setNewFirma(null)}
-              width={580}
-              height={180}
-            />
+            {modo === 'dibujar' ? (
+              <FirmaCanvas
+                onSave={(dataUrl) => setNewFirma(dataUrl)}
+                onClear={() => setNewFirma(null)}
+                width={580}
+                height={180}
+              />
+            ) : (
+              <FirmaUpload
+                onSelect={(dataUrl) => setNewFirma(dataUrl)}
+                onClear={() => setNewFirma(null)}
+              />
+            )}
           </div>
 
           {newFirma && (

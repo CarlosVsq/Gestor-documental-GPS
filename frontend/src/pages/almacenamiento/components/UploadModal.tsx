@@ -8,6 +8,10 @@ interface UploadModalProps {
   requerimientoId: number;
   codigoTicket: string;
   storagePath?: string | null;
+  /** Firma actualmente persistida para el usuario (si existe). */
+  firmaGuardada?: string | null;
+  /** Callback unificado de persistencia — se llama al guardar desde la pestaña Firma. */
+  onFirmaSaved?: (dataUrl: string) => void;
   onSuccess: (docs: Documento[]) => void;
   onClose: () => void;
 }
@@ -34,6 +38,8 @@ export default function UploadModal({
   requerimientoId,
   codigoTicket,
   storagePath,
+  firmaGuardada,
+  onFirmaSaved,
   onSuccess,
   onClose,
 }: UploadModalProps) {
@@ -42,8 +48,6 @@ export default function UploadModal({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{ exitosos: Documento[]; errores: any[] } | null>(null);
-  const [showFirma, setShowFirma] = useState(false);
-  const [firmaBase64, setFirmaBase64] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'archivos' | 'firma'>('archivos');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -171,7 +175,7 @@ export default function UploadModal({
               }}
             >
               {tab === 'archivos' ? '📁 Archivos' : '✍️ Firma Digital'}
-              {tab === 'firma' && firmaBase64 && (
+              {tab === 'firma' && firmaGuardada && (
                 <span style={{ marginLeft: '6px', background: 'var(--success-50)', color: 'var(--success-700)', borderRadius: '99px', padding: '1px 6px', fontSize: '0.7rem' }}>
                   Lista
                 </span>
@@ -290,11 +294,24 @@ export default function UploadModal({
           {activeTab === 'firma' && (
             <div style={{ padding: '4px 0' }}>
               <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
-                La firma se incrustará en el PDF de cierre al cerrar el requerimiento (HU-29).
+                Tu firma se guardará localmente y se reutilizará para firmar documentos y el PDF de cierre (HU-11, HU-29).
               </p>
+
+              {firmaGuardada && (
+                <div style={{ marginBottom: '16px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.82rem', fontWeight: 600, color: '#166534' }}>
+                    ✓ Firma actualmente guardada
+                  </p>
+                  <img
+                    src={firmaGuardada}
+                    alt="Firma guardada"
+                    style={{ maxWidth: '240px', maxHeight: '70px', border: '1px solid var(--gray-200)', borderRadius: '4px', background: 'white', display: 'block' }}
+                  />
+                </div>
+              )}
+
               <FirmaCanvas
-                onSave={(dataUrl) => setFirmaBase64(dataUrl)}
-                onClear={() => setFirmaBase64(null)}
+                onSave={(dataUrl) => onFirmaSaved?.(dataUrl)}
                 width={560}
                 height={180}
               />
