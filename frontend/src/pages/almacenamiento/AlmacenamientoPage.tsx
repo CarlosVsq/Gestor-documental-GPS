@@ -7,6 +7,7 @@ import {
   type SearchFiltros,
 } from '../../api/almacenamiento';
 import { formatBytes, getMimeIcon, triggerBlobDownload } from './utils';
+import { useFirmaPersistida } from './hooks/useFirmaPersistida';
 import DocumentTree from './components/DocumentTree';
 import UploadModal from './components/UploadModal';
 import ConfigurarFirmaModal from './components/ConfigurarFirmaModal';
@@ -73,16 +74,10 @@ type View = 'tree' | 'search' | 'requerimiento';
 
 export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps) {
   const { user } = useAuth();
-  const FIRMA_KEY = `sgd_firma_${user?.id ?? 'anon'}`;
 
-  // ─── Firma persistente ──────────────────────────────────────────────────────
-  const [firmaGuardada, setFirmaGuardada] = useState<string | null>(null);
+  // ─── Firma persistente (HU-11) ──────────────────────────────────────────────
+  const { firma: firmaGuardada } = useFirmaPersistida(user?.id);
   const [showConfigFirma, setShowConfigFirma] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(FIRMA_KEY);
-    if (stored) setFirmaGuardada(stored);
-  }, [FIRMA_KEY]);
 
   // ─── Árbol ─────────────────────────────────────────────────────────────────
   const [view, setView] = useState<View>('tree');
@@ -516,8 +511,7 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
         <ConfigurarFirmaModal
           userId={user?.id ?? 0}
           onClose={() => setShowConfigFirma(false)}
-          onSaved={(dataUrl) => {
-            setFirmaGuardada(dataUrl);
+          onSaved={() => {
             setShowConfigFirma(false);
             onNotify('Firma guardada correctamente', 'success');
           }}

@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from 'react';
 import type { Documento } from '../../../api/almacenamiento';
 import { almacenamientoApi, ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES } from '../../../api/almacenamiento';
 import { formatBytes, getMimeIcon } from '../utils';
-import FirmaCanvas from './FirmaCanvas';
 
 interface UploadModalProps {
   requerimientoId: number;
@@ -28,7 +27,10 @@ interface FileWithStatus {
  * - Drag & drop de múltiples archivos
  * - Barra de progreso por carga masiva
  * - Validación de tipo MIME y tamaño (50 MB)
- * - Canvas de firma opcional
+ *
+ * Para configurar la firma digital, usar `ConfigurarFirmaModal` desde el
+ * header de `AlmacenamientoPage` — la firma vive a nivel de usuario, no
+ * por upload, así que no pertenece a este modal.
  */
 export default function UploadModal({
   requerimientoId,
@@ -42,9 +44,6 @@ export default function UploadModal({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{ exitosos: Documento[]; errores: any[] } | null>(null);
-  const [showFirma, setShowFirma] = useState(false);
-  const [firmaBase64, setFirmaBase64] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'archivos' | 'firma'>('archivos');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
@@ -156,33 +155,8 @@ export default function UploadModal({
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="modal-tabs" style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--gray-200)', padding: '0 24px' }}>
-          {(['archivos', 'firma'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: '12px 16px', fontSize: '0.85rem', fontWeight: 500,
-                borderBottom: activeTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === tab ? 'var(--primary)' : 'var(--gray-500)',
-                transition: 'all .2s',
-              }}
-            >
-              {tab === 'archivos' ? '📁 Archivos' : '✍️ Firma Digital'}
-              {tab === 'firma' && firmaBase64 && (
-                <span style={{ marginLeft: '6px', background: 'var(--success-50)', color: 'var(--success-700)', borderRadius: '99px', padding: '1px 6px', fontSize: '0.7rem' }}>
-                  Lista
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
         <div style={{ padding: '20px 24px' }}>
-          {/* ─── Tab: Archivos ─────────────────────────────────────────────── */}
-          {activeTab === 'archivos' && !result && (
+          {!result && (
             <>
               {/* Drop Zone */}
               <div
@@ -286,21 +260,6 @@ export default function UploadModal({
             </>
           )}
 
-          {/* ─── Tab: Firma ─────────────────────────────────────────────────── */}
-          {activeTab === 'firma' && (
-            <div style={{ padding: '4px 0' }}>
-              <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
-                La firma se incrustará en el PDF de cierre al cerrar el requerimiento (HU-29).
-              </p>
-              <FirmaCanvas
-                onSave={(dataUrl) => setFirmaBase64(dataUrl)}
-                onClear={() => setFirmaBase64(null)}
-                width={560}
-                height={180}
-              />
-            </div>
-          )}
-
           {/* ─── Resultado de la carga ────────────────────────────────────── */}
           {result && (
             <div className="upload-result">
@@ -342,7 +301,7 @@ export default function UploadModal({
           <button className="btn btn-secondary" onClick={onClose}>
             {result ? 'Cerrar' : 'Cancelar'}
           </button>
-          {!result && activeTab === 'archivos' && (
+          {!result && (
             <button
               className="btn btn-primary"
               onClick={handleUpload}
