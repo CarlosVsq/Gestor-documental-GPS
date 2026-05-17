@@ -5,11 +5,12 @@ interface RequerimientosTableProps {
     total: number;
     loading: boolean;
     onUpdateState: (id: number, estado: EstadoRequerimiento) => void;
+    onViewDocs?: (req: Requerimiento) => void;
     proyectos: Record<number, string>;
     contratistas: Record<number, string>;
 }
 
-export default function RequerimientosTable({ requerimientos, total, loading, onUpdateState, proyectos, contratistas }: RequerimientosTableProps) {
+export default function RequerimientosTable({ requerimientos, total, loading, onUpdateState, onViewDocs, proyectos, contratistas }: RequerimientosTableProps) {
     if (loading) {
         return <div className="table-loading"><div className="spinner"></div><p>Cargando requerimientos...</p></div>;
     }
@@ -81,6 +82,15 @@ export default function RequerimientosTable({ requerimientos, total, loading, on
                             </td>
                             <td>
                                 <div className="action-buttons">
+                                    {onViewDocs && req.storagePath && (
+                                        <button
+                                            className="btn-icon btn-icon-info"
+                                            title="Ver carpeta de documentos"
+                                            onClick={() => onViewDocs(req)}
+                                        >
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                                        </button>
+                                    )}
                                     {req.estado === EstadoRequerimiento.ABIERTO && (
                                         <button className="btn-icon btn-icon-warning" title="Pasar a En Progreso" onClick={() => onUpdateState(req.id, EstadoRequerimiento.EN_PROGRESO)}>
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>

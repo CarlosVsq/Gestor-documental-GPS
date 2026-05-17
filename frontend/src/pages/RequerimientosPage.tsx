@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { requerimientosApi } from '../api/requerimientos';
-import type { Requerimiento, CreateRequerimientoDto, EstadoRequerimiento, PrioridadRequerimiento } from '../api/requerimientos';
+import type { Requerimiento, CreateRequerimientoDto, EstadoRequerimiento } from '../api/requerimientos';
 import { contratistasApi } from '../api/contratistas';
 import { areasApi } from '../api/areas';
 import { proyectosApi } from '../api/proyectos';
@@ -9,7 +9,12 @@ import { subtiposApi } from '../api/subtipos';
 import RequerimientosTable from '../components/RequerimientosTable';
 import RequerimientoForm from '../components/RequerimientoForm';
 
-export default function RequerimientosPage({ onNotify }: { onNotify: (msg: string, type: 'success' | 'error') => void }) {
+interface RequerimientosPageProps {
+  onNotify: (msg: string, type: 'success' | 'error') => void;
+  onNavigateToDocs?: (req: Requerimiento) => void;
+}
+
+export default function RequerimientosPage({ onNotify, onNavigateToDocs }: RequerimientosPageProps) {
   const [requerimientos, setRequerimientos] = useState<Requerimiento[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState({ total: 0, abiertos: 0, enProgreso: 0, cerrados: 0 });
@@ -140,6 +145,7 @@ export default function RequerimientosPage({ onNotify }: { onNotify: (msg: strin
         total={total}
         loading={loading}
         onUpdateState={handleChangeState}
+        onViewDocs={onNavigateToDocs}
         proyectos={proyectosMap}
         contratistas={contratistasMap}
       />

@@ -146,6 +146,127 @@ Reglas finales para asegurar que el proceso documental se cumpla estrictamente.
 
 
 
+## Estado de Implementación — Snapshot 2026-05-17
+
+Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o más criterios de aceptación) · ❌ No implementada / Pendiente
+
+> Las HUs marcadas como "adaptadas" originalmente especifican SharePoint o Power BI; el sistema implementado usa **SeaweedFS + PostgreSQL**, por lo que la integración se reemplazó por la pila local equivalente.
+
+### Épica 1 — Mantenedores
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-01 | ✅ | `backend/ms-mantenedores/src/contratistas/` + `frontend/src/pages/...` — CRUD con RUT único y soft delete. |
+| HU-02 | ✅ | `ms-mantenedores/src/areas/` — vinculación a contratista validada. |
+| HU-03 | ✅ | `ms-mantenedores/src/proyectos/proyectos.service.ts` — código autogenerado, validación área. |
+| HU-04 | ✅ | `ms-mantenedores/src/categorias/`. |
+| HU-05 | ✅ | `ms-mantenedores/src/subtipos/` — unicidad por categoría. |
+| HU-06 | ✅ | Validaciones cruzadas en services + DTO de cada mantenedor. |
+
+### Épica 2 — Gestión Documental y Captura
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-07 | ✅ | `ms-almacenamiento/src/documentos/documentos.service.ts` + `UploadModal.tsx`. |
+| HU-08 | ✅ | `UploadModal.tsx:172` input `multiple`; sube varios archivos en un diálogo. |
+| HU-09 | ✅ | `AlmacenamientoPage.tsx` — lista por requerimiento + descarga; preview de PDF/imagen. |
+| HU-10 | ✅ | `api-gateway/src/auth/guards/jwt-auth.guard.ts` + `roles.guard.ts`. |
+| HU-11 | ✅ | `useFirmaPersistida`, `ConfigurarFirmaModal`, `FirmarDocumentoModal`, `pdf.service.ts:168+`. |
+| HU-12 | ✅ (adaptada) | "Document Set" = expediente SeaweedFS por requerimiento (`storagePath` + `almacenamiento.expediente.create`). |
+| HU-13 | ✅ | `documento.entity.ts` — categoriaId, subtipoId, autor, fecha, mimeType. |
+
+### Épica 3 — Workflow y Trazabilidad
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-14 | 🟡 | Transiciones validadas en `requerimientos.service.ts:116-134`, pero **falta** la notificación al cambiar de estado (depende de HU-34/HU-35). |
+| HU-15 | ❌ | `RequerimientosPage` muestra tabla con filtros estado/prioridad pero no es una bandeja kanban; no hay categoría "bloqueados" ni indicador visual de antigüedad. |
+| HU-16 | 🟡 | `documento.entity.ts:71` guarda `metadataAudit` JSONB (ip/userAgent) al subir y campos `creadoPor`/`actualizadoPor`. **Falta** tabla AuditLog inmutable separada con CREATE/UPDATE/DELETE/APPROVE/SIGN y diff antes/después. |
+| HU-17 | ❌ | Solo hay RBAC por rol global. No existe ACL por carpeta ni por documento. Hay campo `permisosObjectFS` en Contratista pero no se enforce en endpoints. |
+| HU-18 | ❌ | No existe interceptor de auditoría automática, ni tabla `auditoria` separada, ni `datos_antes/datos_después`. La trazabilidad parcial es la del HU-16. |
+| HU-19 | ❌ | `requerimientos.service.ts:116-134` (`updateState`) **no** valida que todos los documentos estén firmados antes de cerrar — solo bloquea volver de CERRADO. |
+
+### Épica 4 — Reportabilidad e Inteligencia de Negocios
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-20 | ❌ | Sin integración Power BI. La HU se planteó sobre SharePoint Lists; al usar PostgreSQL+SeaweedFS requiere replanteo (ej. exponer vistas SQL / endpoint OData). |
+| HU-21 | ❌ | Sin gráficos. `Dashboard.tsx` solo tiene KPIs numéricos, no se importa ninguna librería de charts. |
+| HU-22 | ❌ | No hay endpoints ni vistas que agrupen requerimientos por usuario o contratista para reporting. |
+| HU-23 | 🟡 | KPIs Abiertos/En Progreso/Cerrados existen pero **dentro** de `RequerimientosPage` (`api/requerimientos.ts:112-127`, calculados client-side trayendo hasta 1000 filas). Faltan en Dashboard, sin tendencia temporal, sin alerta de "estancados >7 días". |
+| HU-24 | ❌ | Sin exportación a Excel (no hay `xlsx` ni endpoint `/export`). |
+
+### Épica 5 — Autenticación y Seguridad
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-25 | ✅ | `LoginPage.tsx` + `ms-auth/src/auth/auth.service.ts` JWT. |
+| HU-26 | ✅ | `frontend/src/pages/UsersPage.tsx` + `ms-auth/src/users/`. |
+| HU-27 | ❌ | No se encontró timeout por inactividad ni aviso pre-expiración. La expiración del JWT existe pero no hay auto-logout client-side. |
+
+### Épica 6 — Formularios y PDF
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-28 | ✅ | `components/RequerimientoForm.tsx`. |
+| HU-29 | ✅ | `ms-almacenamiento/src/pdf/pdf.service.ts` — pdf-lib + firma incrustada. |
+| HU-30 | 🟡 | `UploadModal` acepta PNG/JPEG/GIF/WebP, pero **no** hay captura desde cámara (`capture="environment"`) ni límite explícito de 10 imágenes/formulario. |
+
+### Épica 7 — Búsqueda y Navegación
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-31 | ✅ | `GET /api/almacenamiento/search` con filtros contratistaId/proyectoId/areaId/categoriaId/estadoDocumento + query text. Resultados paginados. |
+| HU-32 | ✅ | `components/DocumentTree.tsx` — árbol colapsable con conteo de docs. |
+| HU-33 | ❌ | No existe panel "Actividad Reciente". El comentario en Dashboard menciona la idea pero solo renderiza Quick Actions. |
+
+### Épica 8 — Notificaciones
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-34 | ❌ | No hay infraestructura de notificaciones (sin WebSocket/SSE/mailer/in-app badges). |
+| HU-35 | ❌ | Igual que HU-34 — sin sistema de notificaciones. |
+
+### Épica 9 — Workflow Core (Requerimientos)
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-N1 | ✅ | `requerimientos.service.ts:43-78` — código auto, estado inicial ABIERTO. |
+| HU-N2 | ✅ | `RequerimientoForm.tsx` exige categoría y subtipo. |
+| HU-N3 | ✅ | `requerimientos-gateway.controller.ts:47` inyecta `filterContratistaId` cuando `user.rol === CONTRATISTA`. |
+
+### Épica 10 — Integración Storage
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-N4 | ✅ (adaptada) | `requerimientos.service.ts:65-75` dispara `almacenamiento.expediente.create` en SeaweedFS al crear el requerimiento. `storagePath` contiene el código. |
+| HU-N5 | ✅ (adaptada) | Documentos heredan metadatos del requerimiento padre vía `requerimientoId` y join en `search`. |
+| HU-N6 | ✅ | Botón "Ver carpeta de documentos" en `RequerimientosTable.tsx` + navegación cross-page vía `prefilledRequerimiento` en `AlmacenamientoPage` (implementada 2026-05-17). |
+
+### Épica 11 — Validaciones de Negocio y Cierre
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-N7 | ❌ | `updateState()` no consulta la tabla de documentos antes de pasar a EN_PROGRESO. |
+| HU-N8 | ❌ | Al pasar a CERRADO solo se setea `fechaCierre` y opcionalmente `motivoRechazo`. No se genera ni archiva ningún reporte consolidado. |
+
+### Resumen ejecutivo
+
+- **Implementadas (✅):** 22 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-25, HU-26, HU-28, HU-29, HU-31, HU-32, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6.
+- **Parciales (🟡):** 5 — HU-14, HU-16, HU-23, HU-30 (y HU-15 muy cerca de parcial).
+- **No implementadas (❌):** 12 — HU-15, HU-17, HU-18, HU-19, HU-20, HU-21, HU-22, HU-24, HU-27, HU-33, HU-34, HU-35, HU-N7, HU-N8.
+
+### Pendientes prioritarios para una próxima iteración
+
+1. **HU-19 + HU-N7** (validaciones de transición): cambios chicos y de alto valor en `requerimientos.service.ts` — solo requieren llamar a `ms-almacenamiento` antes de cambiar estado.
+2. **HU-N8** (reporte de cierre): puede reutilizar `pdf.service.ts` y `metadataAudit` existente.
+3. **HU-18 + HU-16** (audit log inmutable): tabla nueva + interceptor global en el gateway.
+4. **HU-34/HU-35** (notificaciones): requieren infraestructura nueva (WebSocket o tabla `notificaciones` + polling).
+5. **HU-17** (ACL por carpeta/doc): cambio arquitectónico grande — pensar bien antes de implementar.
+6. **HU-20/HU-21/HU-22/HU-24** (BI/reportes): si se mantiene el alcance original, agrupar como una Épica nueva "Analítica" con su propia página.
+
+---
+
 ### Distribución por Prioridad
 
 - 🔴 **Alta:** 21 HUs
