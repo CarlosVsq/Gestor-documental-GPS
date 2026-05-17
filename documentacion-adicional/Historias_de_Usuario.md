@@ -247,14 +247,14 @@ Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o m�
 
 | HU | Estado | Evidencia / Nota |
 |----|--------|------------------|
-| HU-N7 | ❌ | `updateState()` no consulta la tabla de documentos antes de pasar a EN_PROGRESO. |
+| HU-N7 | ✅ | `requerimientos.service.ts:updateState` consulta `almacenamiento.findByRequerimiento` y bloquea con 409 si el expediente está vacío al pasar a EN_PROGRESO. |
 | HU-N8 | ❌ | Al pasar a CERRADO solo se setea `fechaCierre` y opcionalmente `motivoRechazo`. No se genera ni archiva ningún reporte consolidado. |
 
 ### Resumen ejecutivo
 
-- **Implementadas (✅):** 22 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-25, HU-26, HU-28, HU-29, HU-31, HU-32, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6.
-- **Parciales (🟡):** 5 — HU-14, HU-16, HU-23, HU-30 (y HU-15 muy cerca de parcial).
-- **No implementadas (❌):** 12 — HU-15, HU-17, HU-18, HU-19, HU-20, HU-21, HU-22, HU-24, HU-27, HU-33, HU-34, HU-35, HU-N7, HU-N8.
+- **Implementadas (✅):** 23 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-25, HU-26, HU-28, HU-29, HU-31, HU-32, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7.
+- **Parciales (🟡):** 4 — HU-14, HU-16, HU-23, HU-30 (y HU-15 muy cerca de parcial).
+- **No implementadas (❌):** 11 — HU-15, HU-17, HU-18, HU-19, HU-20, HU-21, HU-22, HU-24, HU-27, HU-33, HU-34, HU-35, HU-N8.
 
 ### Pendientes prioritarios para una próxima iteración
 
@@ -264,6 +264,47 @@ Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o m�
 4. **HU-34/HU-35** (notificaciones): requieren infraestructura nueva (WebSocket o tabla `notificaciones` + polling).
 5. **HU-17** (ACL por carpeta/doc): cambio arquitectónico grande — pensar bien antes de implementar.
 6. **HU-20/HU-21/HU-22/HU-24** (BI/reportes): si se mantiene el alcance original, agrupar como una Épica nueva "Analítica" con su propia página.
+
+---
+
+### Orden de implementación recomendado (7 sprints)
+
+El orden se optimiza para maximizar HUs cerradas por unidad de esfuerzo. El movimiento de mayor palanca es **HU-18 (audit log)** porque cierra HU-16, habilita HU-N8 y alimenta HU-33 sin trabajo extra.
+
+| Sprint | Bloque | HUs cerradas | Esfuerzo |
+|--------|--------|--------------|----------|
+| 1 | Cadena D (sin HU-N8): **HU-N7 + HU-19** | 2 | 1–2 días |
+| 2 | Cadena A: **HU-18** | HU-18, HU-16, HU-33 (parcial) | 3–4 días |
+| 3 | **HU-N8** (con audit log ya disponible) | 1 + cierre 100% de HU-33 | 1 día |
+| 4 | Cadena C (recharts + endpoint `/stats`) | HU-23, HU-21, HU-15 | 3 días |
+| 5 | **HU-22 + HU-24** (mismo módulo analítica) | 2 | 2 días |
+| 6 | Cadena B (notificaciones) | HU-34, HU-35, HU-14 | 3 días |
+| 7 | Independientes pequeñas | HU-30, HU-27 | 1 día |
+| Opcional | HU-17 (ACL), HU-20 (Power BI) | — | grandes/desproporcionadas |
+
+Resultado proyectado: cierra 15 de 17 pendientes (todo excepto HU-17 y HU-20) en ~13–15 días.
+
+### Mapa de dependencias
+
+```
+HU-18 ─┬─► HU-16 (cierra)
+       ├─► HU-33 (alimenta)
+       └─► HU-N8 (enriquece)
+
+[Infra notif] ─┬─► HU-34
+               ├─► HU-35 ──► HU-14 (cierra)
+
+[recharts + /stats] ─┬─► HU-23 (cierra)
+                     ├─► HU-15 (criterio "antigüedad")
+                     ├─► HU-21
+                     └─► HU-22 ──► HU-24
+
+updateState() ─┬─► HU-N7 (independiente)
+               ├─► HU-19
+               └─► HU-N8 (mejor después de HU-18)
+
+Aisladas: HU-30, HU-27, HU-17, HU-20
+```
 
 ---
 

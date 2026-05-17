@@ -10,6 +10,9 @@ coverage/
 .env
 .env.local
 
+# MCP server config (puede contener credenciales)
+.mcp.json
+
 # Database (SQLite dev)
 *.db
 
