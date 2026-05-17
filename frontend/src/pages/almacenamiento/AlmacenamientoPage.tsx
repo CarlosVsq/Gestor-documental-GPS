@@ -76,7 +76,7 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
   const { user } = useAuth();
 
   // ─── Firma persistente (HU-11) ──────────────────────────────────────────────
-  const { firma: firmaGuardada, saveFirma } = useFirmaPersistida(user?.id);
+  const { firma: firmaGuardada } = useFirmaPersistida(user?.id);
   const [showConfigFirma, setShowConfigFirma] = useState(false);
 
   // ─── Árbol ─────────────────────────────────────────────────────────────────
@@ -497,11 +497,6 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
           requerimientoId={selectedReq.id}
           codigoTicket={selectedReq.codigoTicket}
           storagePath={selectedReq.storagePath}
-          firmaGuardada={firmaGuardada}
-          onFirmaSaved={(dataUrl) => {
-            saveFirma(dataUrl);
-            onNotify('Firma guardada correctamente', 'success');
-          }}
           onSuccess={(docs: Documento[]) => {
             onNotify(`${docs.length} documento${docs.length !== 1 ? 's' : ''} cargado${docs.length !== 1 ? 's' : ''} exitosamente`, 'success');
             setShowUpload(false);
