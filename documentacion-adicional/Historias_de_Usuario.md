@@ -252,9 +252,10 @@ Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o m�
 
 ### Resumen ejecutivo
 
-- **Implementadas (✅):** 23 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-25, HU-26, HU-28, HU-29, HU-31, HU-32, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7.
+- **Total HUs:** 43.
+- **Implementadas (✅):** 26 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-25, HU-26, HU-28, HU-29, HU-31, HU-32, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7.
 - **Parciales (🟡):** 4 — HU-14, HU-16, HU-23, HU-30 (y HU-15 muy cerca de parcial).
-- **No implementadas (❌):** 11 — HU-15, HU-17, HU-18, HU-19, HU-20, HU-21, HU-22, HU-24, HU-27, HU-33, HU-34, HU-35, HU-N8.
+- **No implementadas (❌):** 13 — HU-15, HU-17, HU-18, HU-19, HU-20, HU-21, HU-22, HU-24, HU-27, HU-33, HU-34, HU-35, HU-N8.
 
 ### Pendientes prioritarios para una próxima iteración
 
