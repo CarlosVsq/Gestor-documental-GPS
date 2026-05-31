@@ -2,10 +2,12 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { RpcException, ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
+import { firstValueFrom } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { Requerimiento, EstadoRequerimiento, PrioridadRequerimiento } from './requerimiento.entity';
 import { CreateRequerimientoDto } from './dto/create-requerimiento.dto';
 import { UpdateEstadoDto } from './dto/update-estado.dto';
-import { ALMACENAMIENTO_CLIENT } from '../common/constants';
+import { ALMACENAMIENTO_CLIENT, ALMACENAMIENTO_PATTERNS } from '../common/constants';
 
 @Injectable()
 export class RequerimientosService {
@@ -120,6 +122,33 @@ export class RequerimientosService {
             throw new RpcException({ statusCode: 400, message: 'Un requerimiento cerrado no puede volver a abrirse o ponerse en progreso.' });
         }
 
+        // HU-N7: para avanzar a EN_PROGRESO debe existir al menos un documento clasificado.
+        // El requerimiento ya garantiza categoría y subtipo (HU-N2), y los documentos
+        // heredan esos metadatos del padre (HU-N5); basta con que el expediente no esté vacío.
+        if (
+            updateDto.estado === EstadoRequerimiento.EN_PROGRESO &&
+            req.estado !== EstadoRequerimiento.EN_PROGRESO
+        ) {
+            const documentos = await firstValueFrom(
+                this.almacenamientoClient
+                    .send<unknown[]>(ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO, { requerimientoId: id })
+                    .pipe(timeout(5000)),
+            ).catch((err) => {
+                this.logger.error(`No se pudo consultar documentos del requerimiento ${id}: ${err?.message}`);
+                throw new RpcException({
+                    statusCode: 503,
+                    message: 'No se pudo verificar el expediente. Intenta de nuevo en unos segundos.',
+                });
+            });
+
+            if (!Array.isArray(documentos) || documentos.length === 0) {
+                throw new RpcException({
+                    statusCode: 409,
+                    message: 'El requerimiento no puede pasar a "En Progreso" porque no tiene documentación técnica adjunta. Sube al menos un documento al expediente.',
+                });
+            }
+        }
+
         if (updateDto.estado === EstadoRequerimiento.CERRADO && req.estado !== EstadoRequerimiento.CERRADO) {
             req.fechaCierre = new Date();
         }
@@ -128,7 +157,7 @@ export class RequerimientosService {
         if (updateDto.motivoRechazo) {
             req.motivoRechazo = updateDto.motivoRechazo;
         }
-        
+
         req.actualizadoPor = 'admin';
         return this.requerimientoRepository.save(req);
     }

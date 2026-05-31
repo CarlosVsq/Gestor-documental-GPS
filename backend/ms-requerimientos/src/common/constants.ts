@@ -14,5 +14,11 @@ export const REQUERIMIENTOS_PATTERNS = {
   UPDATE_STATE: 'requerimientos.updateState',
 } as const;
 
+/** Patterns que este microservicio consume vía TCP del ms-almacenamiento. */
+export const ALMACENAMIENTO_PATTERNS = {
+  CREATE_EXPEDIENTE: 'almacenamiento.expediente.create',
+  FIND_BY_REQUERIMIENTO: 'almacenamiento.findByRequerimiento',
+} as const;
+
 /** Token de inyección del cliente TCP hacia ms-almacenamiento */
 export const ALMACENAMIENTO_CLIENT = 'ALMACENAMIENTO_SERVICE';

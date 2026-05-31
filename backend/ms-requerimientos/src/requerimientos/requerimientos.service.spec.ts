@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
+import { of, throwError } from 'rxjs';
 import { RequerimientosService } from './requerimientos.service';
 import { Requerimiento, EstadoRequerimiento } from './requerimiento.entity';
-import { ALMACENAMIENTO_CLIENT } from '../common/constants';
+import { ALMACENAMIENTO_CLIENT, ALMACENAMIENTO_PATTERNS } from '../common/constants';
 
 /**
  * Test unitario del servicio de Requerimientos (HU-N1, HU-N2)
@@ -20,7 +21,15 @@ describe('RequerimientosService', () => {
   };
 
   const mockAlmacenamientoClient = {
-    send: jest.fn().mockReturnValue({ subscribe: jest.fn() }),
+    send: jest.fn().mockImplementation((pattern: string) => {
+      // El create() del service llama a expediente.create con .subscribe() (fire-and-forget).
+      if (pattern === ALMACENAMIENTO_PATTERNS.CREATE_EXPEDIENTE) {
+        return { subscribe: jest.fn() };
+      }
+      // Default para findByRequerimiento (HU-N7): devolvemos lista con 1 documento.
+      // Cada test puede sobreescribir esto con mockReturnValueOnce.
+      return of([{ id: 1, requerimientoId: 1 }]);
+    }),
   };
 
   beforeEach(async () => {
@@ -147,6 +156,47 @@ describe('RequerimientosService', () => {
 
       const result = await service.updateState(1, { estado: EstadoRequerimiento.CERRADO });
       expect(result.estado).toBe(EstadoRequerimiento.CERRADO);
+    });
+
+    // ─── HU-N7: validación de expediente para EN_PROGRESO ────────
+    it('HU-N7: debería bloquear el paso a EN_PROGRESO si el expediente está vacío', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.ABIERTO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockAlmacenamientoClient.send.mockReturnValueOnce(of([]));
+
+      await expect(
+        service.updateState(1, { estado: EstadoRequerimiento.EN_PROGRESO }),
+      ).rejects.toThrow(RpcException);
+
+      expect(mockAlmacenamientoClient.send).toHaveBeenCalledWith(
+        ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO,
+        { requerimientoId: 1 },
+      );
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('HU-N7: NO debería consultar documentos si ya estaba en EN_PROGRESO', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockRepository.save.mockResolvedValue(req);
+
+      await service.updateState(1, { estado: EstadoRequerimiento.EN_PROGRESO });
+
+      expect(mockAlmacenamientoClient.send).not.toHaveBeenCalledWith(
+        ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO,
+        expect.anything(),
+      );
+    });
+
+    it('HU-N7: debería responder error si almacenamiento no está disponible', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.ABIERTO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockAlmacenamientoClient.send.mockReturnValueOnce(throwError(() => new Error('TCP down')));
+
+      await expect(
+        service.updateState(1, { estado: EstadoRequerimiento.EN_PROGRESO }),
+      ).rejects.toThrow(RpcException);
+      expect(mockRepository.save).not.toHaveBeenCalled();
     });
   });
 });
