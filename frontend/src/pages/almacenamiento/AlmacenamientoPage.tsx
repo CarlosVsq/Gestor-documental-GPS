@@ -66,13 +66,21 @@ function AppDialog({ state, onClose }: { state: DialogState; onClose: () => void
   );
 }
 
+export interface PrefilledRequerimiento {
+  id: number;
+  codigoTicket: string;
+  storagePath: string;
+}
+
 interface AlmacenamientoPageProps {
   onNotify: (message: string, type: 'success' | 'error') => void;
+  prefilledRequerimiento?: PrefilledRequerimiento | null;
+  onPrefillConsumed?: () => void;
 }
 
 type View = 'tree' | 'search' | 'requerimiento';
 
-export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps) {
+export default function AlmacenamientoPage({ onNotify, prefilledRequerimiento, onPrefillConsumed }: AlmacenamientoPageProps) {
   const { user } = useAuth();
 
   // ─── Firma persistente (HU-11) ──────────────────────────────────────────────
@@ -147,6 +155,18 @@ export default function AlmacenamientoPage({ onNotify }: AlmacenamientoPageProps
       setLoadingDocs(false);
     }
   }, [onNotify]);
+
+  // HU-N6: si el padre nos pasó un requerimiento preseleccionado (navegación
+  // desde la vista de Requerimientos), lo abrimos automáticamente.
+  useEffect(() => {
+    if (!prefilledRequerimiento) return;
+    handleSelectRequerimiento(
+      prefilledRequerimiento.id,
+      prefilledRequerimiento.codigoTicket,
+      prefilledRequerimiento.storagePath,
+    );
+    onPrefillConsumed?.();
+  }, [prefilledRequerimiento, handleSelectRequerimiento, onPrefillConsumed]);
 
   // ─── Búsqueda ───────────────────────────────────────────────────────────────
   const handleSearch = useCallback(async (filtros: SearchFiltros) => {

@@ -14,7 +14,8 @@ import UsersPage from './pages/UsersPage';
 import CategoriasPage from './pages/CategoriasPage';
 import SubtiposPage from './pages/SubtiposPage';
 import RequerimientosPage from './pages/RequerimientosPage';
-import AlmacenamientoPage from './pages/almacenamiento/AlmacenamientoPage';
+import AlmacenamientoPage, { type PrefilledRequerimiento } from './pages/almacenamiento/AlmacenamientoPage';
+import type { Requerimiento } from './api/requerimientos';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
@@ -85,6 +86,14 @@ function AppLayout() {
   const [proyectosLoading, setProyectosLoading] = useState(true);
   const [editingProyecto, setEditingProyecto] = useState<Proyecto | null>(null);
   const [showProyectoForm, setShowProyectoForm] = useState(false);
+
+  // --- HU-N6: shortcut desde Requerimientos al document set ---
+  const [prefilledReq, setPrefilledReq] = useState<PrefilledRequerimiento | null>(null);
+  const handleNavigateToDocs = useCallback((req: Requerimiento) => {
+    if (!req.storagePath) return;
+    setPrefilledReq({ id: req.id, codigoTicket: req.codigoTicket, storagePath: req.storagePath });
+    setActivePage('almacenamiento');
+  }, []);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -362,10 +371,16 @@ function AppLayout() {
         return <SubtiposPage onNotify={showNotification} />;
 
       case 'requerimientos':
-        return <RequerimientosPage onNotify={showNotification} />;
+        return <RequerimientosPage onNotify={showNotification} onNavigateToDocs={handleNavigateToDocs} />;
 
       case 'almacenamiento':
-        return <AlmacenamientoPage onNotify={showNotification} />;
+        return (
+          <AlmacenamientoPage
+            onNotify={showNotification}
+            prefilledRequerimiento={prefilledReq}
+            onPrefillConsumed={() => setPrefilledReq(null)}
+          />
+        );
 
       default:
         return (
