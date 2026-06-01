@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -16,6 +17,8 @@ import { TcpClientsModule } from './common/tcp-clients.module';
 import { CategoriasGatewayModule } from './categorias/categorias-gateway.module';
 import { SubtiposGatewayModule } from './subtipos/subtipos-gateway.module';
 import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gateway.module';
+import { AuditoriaGatewayModule } from './auditoria/auditoria-gateway.module';
+import { AuditoriaInterceptor } from './common/interceptors/auditoria.interceptor';
 
 @Module({
   imports: [
@@ -46,6 +49,10 @@ import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gat
     SubtiposGatewayModule,
     RequerimientosGatewayModule,
     AlmacenamientoGatewayModule,
+    AuditoriaGatewayModule,
+  ],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor },
   ],
 })
 export class AppModule {}

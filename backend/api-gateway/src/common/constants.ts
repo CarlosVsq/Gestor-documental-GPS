@@ -16,6 +16,7 @@ export const SERVICE_NAMES = {
   MANTENEDORES: 'MANTENEDORES_SERVICE',
   REQUERIMIENTOS: 'REQUERIMIENTOS_SERVICE',
   ALMACENAMIENTO: 'ALMACENAMIENTO_SERVICE',
+  AUDITORIA: 'AUDITORIA_SERVICE',
 } as const;
 
 export const AUTH_PATTERNS = {
@@ -99,3 +100,21 @@ export const ALMACENAMIENTO_PATTERNS = {
   // PDF
   GENERATE_PDF: 'almacenamiento.pdf.generate',
 } as const;
+
+export const AUDITORIA_PATTERNS = {
+  REGISTRAR: 'auditoria.registrar',
+  FIND_RECIENTES: 'auditoria.findRecientes',
+  FIND_BY_ENTIDAD: 'auditoria.findByEntidad',
+  FIND_BY_REQUERIMIENTO: 'auditoria.findByRequerimiento',
+} as const;
+
+export enum AccionAuditoria {
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  APPROVE = 'APPROVE',
+  SIGN = 'SIGN',
+  STATE_CHANGE = 'STATE_CHANGE',
+  CLOSE_REPORT = 'CLOSE_REPORT',
+  LOGIN = 'LOGIN',
+}
