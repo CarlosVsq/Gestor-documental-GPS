@@ -8,6 +8,10 @@ import { categoriasApi } from '../api/categorias';
 import { subtiposApi } from '../api/subtipos';
 import RequerimientosTable from '../components/RequerimientosTable';
 import RequerimientoForm from '../components/RequerimientoForm';
+import { almacenamientoApi } from '../api/almacenamiento';
+import { useAuth } from '../context/AuthContext';
+
+const ROLES_REPORTE = ['admin', 'supervisor', 'gerente'];
 
 interface RequerimientosPageProps {
   onNotify: (msg: string, type: 'success' | 'error') => void;
@@ -20,6 +24,10 @@ export default function RequerimientosPage({ onNotify, onNavigateToDocs }: Reque
   const [stats, setStats] = useState({ total: 0, abiertos: 0, enProgreso: 0, cerrados: 0 });
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [reporteEnProgreso, setReporteEnProgreso] = useState<number | null>(null);
+
+  const { user } = useAuth();
+  const puedeGenerarReporte = !!user && ROLES_REPORTE.includes(user.rol);
 
   // Filtros
   const [filterEstado, setFilterEstado] = useState<string>('');
@@ -105,6 +113,18 @@ export default function RequerimientosPage({ onNotify, onNavigateToDocs }: Reque
     }
   };
 
+  const handleGenerarReporte = async (req: Requerimiento) => {
+    setReporteEnProgreso(req.id);
+    try {
+      await almacenamientoApi.generarReporteCierre(req.id);
+      onNotify('Reporte de auditoría generado y archivado en el expediente', 'success');
+    } catch (err: any) {
+      onNotify(err.message || 'Error al generar el reporte de cierre', 'error');
+    } finally {
+      setReporteEnProgreso(null);
+    }
+  };
+
   return (
     <div className="page-content">
       {/* Topbar Actions */}
@@ -146,6 +166,8 @@ export default function RequerimientosPage({ onNotify, onNavigateToDocs }: Reque
         loading={loading}
         onUpdateState={handleChangeState}
         onViewDocs={onNavigateToDocs}
+        onGenerarReporte={puedeGenerarReporte ? handleGenerarReporte : undefined}
+        reporteEnProgreso={reporteEnProgreso}
         proyectos={proyectosMap}
         contratistas={contratistasMap}
       />

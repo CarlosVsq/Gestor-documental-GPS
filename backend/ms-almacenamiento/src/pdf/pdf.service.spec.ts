@@ -101,6 +101,7 @@ describe('PdfService', () => {
       uploadBulk: jest.fn(),
       delete: jest.fn(),
       updateEstado: jest.fn(),
+      marcarFirmado: jest.fn(),
       search: jest.fn(),
       getTree: jest.fn(),
       countByRequerimiento: jest.fn(),
@@ -184,8 +185,8 @@ describe('PdfService', () => {
       expect(mockSeaweed.downloadFile).toHaveBeenCalledWith(doc.pathSeaweed);
     });
 
-    it('NO sube el documento firmado a SeaweedFS (solo retorna para descarga directa)', async () => {
-      const doc = makeDoc();
+    it('HU-11: persiste el PDF firmado en SeaweedFS y registra la firma en BD', async () => {
+      const doc = makeDoc({ pathSeaweed: '/1/2/3/REQ-001/1234-abc.pdf' });
       mockDocumentosService.findOne.mockResolvedValue(doc);
       mockSeaweed.downloadFile.mockResolvedValue({
         buffer: Buffer.from('original-pdf'),
@@ -194,7 +195,22 @@ describe('PdfService', () => {
 
       await service.firmarDocumento(firmarParams);
 
-      expect(mockSeaweed.uploadFile).not.toHaveBeenCalled();
+      // Reescribe el archivo firmado en el mismo path (dir + nombre de storage)
+      expect(mockSeaweed.uploadFile).toHaveBeenCalledWith(
+        '/1/2/3/REQ-001',
+        '1234-abc.pdf',
+        expect.any(Buffer),
+        'application/pdf',
+      );
+      // Persiste quién firmó y cuándo (+ hash/tamaño del firmado)
+      expect(mockDocumentosService.marcarFirmado).toHaveBeenCalledWith(
+        doc.id,
+        expect.objectContaining({
+          firmadoPorId: firmarParams.firmadoPorId,
+          sha256Hash: expect.any(String),
+          tamañoBytes: expect.any(Number),
+        }),
+      );
     });
 
     it('limpia el prefijo data:image/...;base64, de firmaBase64 antes de procesar', async () => {
@@ -276,6 +292,47 @@ describe('PdfService', () => {
       const updateCall = mockDataSource.query.mock.calls[1];
       expect(updateCall[0]).toContain('UPDATE documentos');
       expect(updateCall[1]).toContain(EstadoDocumento.OFICIAL);
+    });
+  });
+
+  // ─── generateReporteCierre() (HU-N8) ──────────────────────────────────────
+
+  describe('generateReporteCierre()', () => {
+    it('HU-N8: arma el reporte con el log de auditoría y lo archiva como OFICIAL', async () => {
+      mockDataSource.query
+        .mockResolvedValueOnce([{ ...mockReqData, storagePath: '/1/2/3/REQ-001' }])
+        .mockResolvedValueOnce([
+          { accion: 'STATE_CHANGE', entidad: 'requerimientos', usuarioId: 2, usuarioEmail: 's@sgd.cl', ruta: '/api/requerimientos/1/estado', timestamp: new Date() },
+        ])
+        .mockResolvedValueOnce([]);
+      mockSeaweed.uploadFile.mockResolvedValue({ path: '/1/2/3/REQ-001/rep.pdf', filename: 'rep.pdf' });
+      mockDocumentosService.upload.mockResolvedValue(makeDoc({ id: 77 }));
+
+      const result = await service.generateReporteCierre({ requerimientoId: 1, generadoPorId: 2 });
+
+      expect(mockSeaweed.uploadFile).toHaveBeenCalled();
+      expect(result.documentoId).toBe(77);
+      const updateCall = mockDataSource.query.mock.calls[2];
+      expect(updateCall[0]).toContain('UPDATE documentos');
+    });
+
+    it('HU-N8: lanza 404 si el requerimiento no existe', async () => {
+      mockDataSource.query.mockResolvedValueOnce([]);
+      await expect(
+        service.generateReporteCierre({ requerimientoId: 999, generadoPorId: 2 }),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('HU-N8: si la tabla auditoria falla, genera el reporte igual (log vacío)', async () => {
+      mockDataSource.query
+        .mockResolvedValueOnce([{ ...mockReqData, storagePath: '/1' }])
+        .mockRejectedValueOnce(new Error('relation "auditoria" does not exist'))
+        .mockResolvedValueOnce([]);
+      mockSeaweed.uploadFile.mockResolvedValue({ path: '/1/rep.pdf', filename: 'rep.pdf' });
+      mockDocumentosService.upload.mockResolvedValue(makeDoc({ id: 78 }));
+
+      const result = await service.generateReporteCierre({ requerimientoId: 1, generadoPorId: 2 });
+      expect(result.documentoId).toBe(78);
     });
   });
 });

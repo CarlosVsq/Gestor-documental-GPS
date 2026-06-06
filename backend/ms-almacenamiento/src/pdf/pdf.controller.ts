@@ -18,6 +18,12 @@ export class PdfController {
     return this.pdfService.generateCierrePdf(data);
   }
 
+  /** HU-N8: Generar reporte de auditoría de cierre de un Requerimiento */
+  @MessagePattern(ALMACENAMIENTO_PATTERNS.GENERATE_REPORTE_CIERRE)
+  async generateReporteCierre(@Payload() data: { requerimientoId: number; generadoPorId: number }) {
+    return this.pdfService.generateReporteCierre(data);
+  }
+
   /** HU-11: Estampar firma en un PDF existente (genera versión firmada) */
   @MessagePattern(ALMACENAMIENTO_PATTERNS.FIRMAR_DOCUMENTO)
   async firmarDocumento(@Payload() data: {

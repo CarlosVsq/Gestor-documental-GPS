@@ -6,11 +6,13 @@ interface RequerimientosTableProps {
     loading: boolean;
     onUpdateState: (id: number, estado: EstadoRequerimiento) => void;
     onViewDocs?: (req: Requerimiento) => void;
+    onGenerarReporte?: (req: Requerimiento) => void;
+    reporteEnProgreso?: number | null;
     proyectos: Record<number, string>;
     contratistas: Record<number, string>;
 }
 
-export default function RequerimientosTable({ requerimientos, total, loading, onUpdateState, onViewDocs, proyectos, contratistas }: RequerimientosTableProps) {
+export default function RequerimientosTable({ requerimientos, total, loading, onUpdateState, onViewDocs, onGenerarReporte, reporteEnProgreso, proyectos, contratistas }: RequerimientosTableProps) {
     if (loading) {
         return <div className="table-loading"><div className="spinner"></div><p>Cargando requerimientos...</p></div>;
     }
@@ -103,6 +105,18 @@ export default function RequerimientosTable({ requerimientos, total, loading, on
                                     )}
                                     {req.estado === EstadoRequerimiento.CERRADO && (
                                         <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>Finalizado</span>
+                                    )}
+                                    {req.estado === EstadoRequerimiento.CERRADO && onGenerarReporte && (
+                                        <button
+                                            className="btn-icon btn-icon-info"
+                                            title="Generar reporte de auditoría de cierre"
+                                            disabled={reporteEnProgreso === req.id}
+                                            onClick={() => onGenerarReporte(req)}
+                                        >
+                                            {reporteEnProgreso === req.id
+                                                ? <span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
+                                                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><polyline points="9 15 12 12 15 15" /></svg>}
+                                        </button>
                                     )}
                                 </div>
                             </td>

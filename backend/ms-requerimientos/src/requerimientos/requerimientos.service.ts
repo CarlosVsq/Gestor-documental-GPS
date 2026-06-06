@@ -129,19 +129,8 @@ export class RequerimientosService {
             updateDto.estado === EstadoRequerimiento.EN_PROGRESO &&
             req.estado !== EstadoRequerimiento.EN_PROGRESO
         ) {
-            const documentos = await firstValueFrom(
-                this.almacenamientoClient
-                    .send<unknown[]>(ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO, { requerimientoId: id })
-                    .pipe(timeout(5000)),
-            ).catch((err) => {
-                this.logger.error(`No se pudo consultar documentos del requerimiento ${id}: ${err?.message}`);
-                throw new RpcException({
-                    statusCode: 503,
-                    message: 'No se pudo verificar el expediente. Intenta de nuevo en unos segundos.',
-                });
-            });
-
-            if (!Array.isArray(documentos) || documentos.length === 0) {
+            const documentos = await this.fetchDocumentos(id);
+            if (documentos.length === 0) {
                 throw new RpcException({
                     statusCode: 409,
                     message: 'El requerimiento no puede pasar a "En Progreso" porque no tiene documentación técnica adjunta. Sube al menos un documento al expediente.',
@@ -149,7 +138,20 @@ export class RequerimientosService {
             }
         }
 
+        // HU-19: no se puede cerrar un requerimiento mientras existan documentos PDF
+        // sin firmar. Los formatos no firmables (imágenes, Office) no bloquean el cierre.
         if (updateDto.estado === EstadoRequerimiento.CERRADO && req.estado !== EstadoRequerimiento.CERRADO) {
+            const documentos = await this.fetchDocumentos(id);
+            const pdfsSinFirmar = documentos.filter(
+                (d) => (d.mimeType || '').toLowerCase().includes('pdf') && !d.firmadoEn,
+            );
+            if (pdfsSinFirmar.length > 0) {
+                const nombres = pdfsSinFirmar.map((d) => d.nombreOriginal || `documento #${d.id}`).join(', ');
+                throw new RpcException({
+                    statusCode: 409,
+                    message: `No se puede cerrar el requerimiento: ${pdfsSinFirmar.length} documento(s) PDF sin firmar (${nombres}). Firma todos los documentos antes de cerrar.`,
+                });
+            }
             req.fechaCierre = new Date();
         }
 
@@ -160,5 +162,27 @@ export class RequerimientosService {
 
         req.actualizadoPor = 'admin';
         return this.requerimientoRepository.save(req);
+    }
+
+    /**
+     * Consulta los documentos del expediente vía ms-almacenamiento (TCP).
+     * Centraliza el timeout y la traducción del fallo de red a un 503 claro,
+     * reutilizada por la validación de EN_PROGRESO (HU-N7) y de CERRADO (HU-19).
+     */
+    private async fetchDocumentos(
+        requerimientoId: number,
+    ): Promise<Array<{ id?: number; nombreOriginal?: string; mimeType?: string; firmadoEn?: string | Date | null }>> {
+        const documentos = await firstValueFrom(
+            this.almacenamientoClient
+                .send<unknown[]>(ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO, { requerimientoId })
+                .pipe(timeout(5000)),
+        ).catch((err) => {
+            this.logger.error(`No se pudo consultar documentos del requerimiento ${requerimientoId}: ${err?.message}`);
+            throw new RpcException({
+                statusCode: 503,
+                message: 'No se pudo verificar el expediente. Intenta de nuevo en unos segundos.',
+            });
+        });
+        return Array.isArray(documentos) ? documentos : [];
     }
 }

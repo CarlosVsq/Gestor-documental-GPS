@@ -286,6 +286,21 @@ export class AlmacenamientoGatewayController {
     }));
   }
 
+  // ─── Reporte de auditoría de cierre (HU-N8) ───────────────────────────────
+
+  @Post('reporte-cierre/:requerimientoId')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.GERENTE)
+  @ApiOperation({ summary: 'HU-N8: Generar y archivar el reporte de auditoría de cierre del requerimiento' })
+  async generateReporteCierre(
+    @Param('requerimientoId', ParseIntPipe) requerimientoId: number,
+    @Req() req: any,
+  ) {
+    return callService(this.client.send(ALMACENAMIENTO_PATTERNS.GENERATE_REPORTE_CIERRE, {
+      requerimientoId,
+      generadoPorId: req.user.id,
+    }));
+  }
+
   // ─── Obtener uno / Eliminar ───────────────────────────────────────────────
 
   @Get(':id')

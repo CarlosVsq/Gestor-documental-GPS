@@ -158,6 +158,44 @@ describe('RequerimientosService', () => {
       expect(result.estado).toBe(EstadoRequerimiento.CERRADO);
     });
 
+    // ─── HU-19: no cerrar con documentos PDF sin firmar ──────────
+    it('HU-19: debería bloquear el cierre si hay un PDF sin firmar', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockAlmacenamientoClient.send.mockReturnValueOnce(
+        of([{ id: 9, nombreOriginal: 'contrato.pdf', mimeType: 'application/pdf', firmadoEn: null }]),
+      );
+
+      await expect(
+        service.updateState(1, { estado: EstadoRequerimiento.CERRADO }),
+      ).rejects.toThrow(RpcException);
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('HU-19: debería permitir cerrar si todos los PDFs están firmados', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockRepository.save.mockResolvedValue({ ...req, estado: EstadoRequerimiento.CERRADO });
+      mockAlmacenamientoClient.send.mockReturnValueOnce(
+        of([{ id: 9, nombreOriginal: 'contrato.pdf', mimeType: 'application/pdf', firmadoEn: new Date() }]),
+      );
+
+      const result = await service.updateState(1, { estado: EstadoRequerimiento.CERRADO });
+      expect(result.estado).toBe(EstadoRequerimiento.CERRADO);
+    });
+
+    it('HU-19: documentos no-PDF (imágenes) no bloquean el cierre', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockRepository.save.mockResolvedValue({ ...req, estado: EstadoRequerimiento.CERRADO });
+      mockAlmacenamientoClient.send.mockReturnValueOnce(
+        of([{ id: 9, nombreOriginal: 'foto.png', mimeType: 'image/png', firmadoEn: null }]),
+      );
+
+      const result = await service.updateState(1, { estado: EstadoRequerimiento.CERRADO });
+      expect(result.estado).toBe(EstadoRequerimiento.CERRADO);
+    });
+
     // ─── HU-N7: validación de expediente para EN_PROGRESO ────────
     it('HU-N7: debería bloquear el paso a EN_PROGRESO si el expediente está vacío', async () => {
       const req = { id: 1, estado: EstadoRequerimiento.ABIERTO, actualizadoPor: 'admin' };

@@ -267,4 +267,20 @@ export class DocumentosService {
     this.logger.log(`Documento #${id}: ${doc.estadoDocumento} → ${nuevoEstado}`);
     return { ...doc, estadoDocumento: nuevoEstado };
   }
+
+  /**
+   * Persiste la firma digital de un documento ya firmado (HU-11).
+   * El PdfService genera el PDF firmado y lo reescribe en SeaweedFS; aquí solo
+   * se actualiza la metadata: quién firmó, cuándo, y el nuevo hash/tamaño.
+   */
+  async marcarFirmado(
+    id: number,
+    data: { firmadoPorId: number; sha256Hash: string; tamañoBytes: number },
+  ): Promise<Documento> {
+    const doc = await this.findOne(id);
+    const firmadoEn = new Date();
+    await this.documentosRepository.marcarFirmado(id, { ...data, firmadoEn });
+    this.logger.log(`Documento #${id} firmado por usuario ${data.firmadoPorId}`);
+    return { ...doc, ...data, firmadoEn };
+  }
 }

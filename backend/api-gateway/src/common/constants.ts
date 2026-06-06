@@ -99,6 +99,7 @@ export const ALMACENAMIENTO_PATTERNS = {
   GET_TREE: 'almacenamiento.expediente.tree',
   // PDF
   GENERATE_PDF: 'almacenamiento.pdf.generate',
+  GENERATE_REPORTE_CIERRE: 'almacenamiento.pdf.reporteCierre',
 } as const;
 
 export const AUDITORIA_PATTERNS = {
