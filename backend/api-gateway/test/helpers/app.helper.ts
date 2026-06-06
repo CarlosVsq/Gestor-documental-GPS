@@ -43,6 +43,7 @@ export interface TestClients {
   mantenedores: ReturnType<typeof mockTcpClient>;
   requerimientos: ReturnType<typeof mockTcpClient>;
   almacenamiento: ReturnType<typeof mockTcpClient>;
+  auditoria: ReturnType<typeof mockTcpClient>;
 }
 
 export async function buildTestApp(): Promise<{ app: INestApplication; clients: TestClients }> {
@@ -50,12 +51,14 @@ export async function buildTestApp(): Promise<{ app: INestApplication; clients: 
   const mantenedores = mockTcpClient();
   const requerimientos = mockTcpClient();
   const almacenamiento = mockTcpClient();
+  const auditoria = mockTcpClient();
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(SERVICE_NAMES.AUTH).useValue(auth)
     .overrideProvider(SERVICE_NAMES.MANTENEDORES).useValue(mantenedores)
     .overrideProvider(SERVICE_NAMES.REQUERIMIENTOS).useValue(requerimientos)
     .overrideProvider(SERVICE_NAMES.ALMACENAMIENTO).useValue(almacenamiento)
+    .overrideProvider(SERVICE_NAMES.AUDITORIA).useValue(auditoria)
     .compile();
 
   const app = moduleRef.createNestApplication();
@@ -66,5 +69,5 @@ export async function buildTestApp(): Promise<{ app: INestApplication; clients: 
   );
 
   await app.init();
-  return { app, clients: { auth, mantenedores, requerimientos, almacenamiento } };
+  return { app, clients: { auth, mantenedores, requerimientos, almacenamiento, auditoria } };
 }

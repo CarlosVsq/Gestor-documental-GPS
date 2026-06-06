@@ -38,6 +38,14 @@ import { SERVICE_NAMES } from './constants';
           port: parseInt(process.env.ALMACENAMIENTO_SERVICE_PORT, 10) || 3003,
         },
       },
+      {
+        name: SERVICE_NAMES.AUDITORIA,
+        transport: Transport.TCP,
+        options: {
+          host: process.env.AUDITORIA_SERVICE_HOST || 'ms-auditoria',
+          port: parseInt(process.env.AUDITORIA_SERVICE_PORT, 10) || 3005,
+        },
+      },
     ]),
   ],
   exports: [ClientsModule],
