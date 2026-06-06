@@ -62,6 +62,17 @@ export class Documento {
   @Column({ type: 'int', default: 1 })
   version: number;
 
+  // ─── Firma digital (HU-11) ─────────────────────────────────────────────
+  /**
+   * Momento en que el documento fue firmado digitalmente. NULL = sin firmar.
+   * HU-19 usa este campo para impedir cerrar un requerimiento con PDFs sin firma.
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  firmadoEn: Date | null;
+
+  @Column({ type: 'int', nullable: true })
+  firmadoPorId: number | null;
+
   // ─── Auditoría ─────────────────────────────────────────────────────────
   /**
    * Guarda IP, User-Agent y opcionalmente geolocalización del upload.

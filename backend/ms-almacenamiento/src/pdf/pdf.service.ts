@@ -310,17 +310,163 @@ export class PdfService {
     const auditText = `Firmado el ${new Date().toLocaleString('es-CL')}, Sistema de Gestion Documental - GPS`;
     page.drawText(auditText, { x, y: y - 12, font: fontRegular, size: 7, color: rgb(0.45, 0.45, 0.45) });
 
-    // 4. Serializar y calcular hash — NO se guarda en SeaweedFS ni en BD
+    // 4. Serializar y calcular hash
     const signedBytes = await pdfDoc.save();
     const signedBuffer = Buffer.from(signedBytes);
     const sha256Hash = crypto.createHash('sha256').update(signedBuffer).digest('hex');
 
+    // 5. Persistir (HU-11): el PDF firmado reemplaza al original en el mismo path
+    //    de SeaweedFS y se registra quién firmó y cuándo en la BD.
+    const slash = docOriginal.pathSeaweed.lastIndexOf('/');
+    const dirPath = docOriginal.pathSeaweed.slice(0, slash);
+    const storageFilename = docOriginal.pathSeaweed.slice(slash + 1);
+    await this.seaweedFsService.uploadFile(dirPath, storageFilename, signedBuffer, 'application/pdf');
+    await this.documentosService.marcarFirmado(docOriginal.id, {
+      firmadoPorId: params.firmadoPorId,
+      sha256Hash,
+      tamañoBytes: signedBuffer.length,
+    });
+
     const baseName = docOriginal.nombreOriginal.replace(/\.pdf$/i, '');
     const filename = `${baseName}_firmado.pdf`;
 
-    this.logger.log(`Documento firmado generado para descarga: ${filename}, SHA-256: ${sha256Hash}`);
+    this.logger.log(`Documento #${docOriginal.id} firmado y persistido: ${filename}, SHA-256: ${sha256Hash}`);
 
     // Retorna los bytes en base64 para que el gateway los envíe como descarga directa
     return { pdfBase64: signedBuffer.toString('base64'), filename, sha256Hash };
+  }
+
+  /**
+   * Genera el reporte de auditoría de cierre de un Requerimiento (HU-N8).
+   *
+   * Invocado manualmente por el supervisor. Consolida en un PDF la trazabilidad
+   * completa del expediente (acciones registradas en `ms-auditoria`) más un
+   * resumen del requerimiento, y lo archiva como documento OFICIAL en el mismo
+   * expediente de SeaweedFS.
+   *
+   * El log de auditoría se lee por SQL de la BD compartida (misma estrategia que
+   * `generateCierrePdf`, que ya consulta tablas de otros servicios).
+   */
+  async generateReporteCierre(params: {
+    requerimientoId: number;
+    generadoPorId: number;
+  }): Promise<{ documentoId: number; sha256Hash: string }> {
+    const [reqData] = await this.dataSource.query(
+      `SELECT r.*, p.nombre AS "proyectoNombre", c.nombre AS "contratistaNombre"
+       FROM requerimientos r
+       LEFT JOIN proyectos p ON p.id = r."proyectoId"
+       LEFT JOIN contratistas c ON c.id = r."contratistaId"
+       WHERE r.id = $1`,
+      [params.requerimientoId],
+    );
+
+    if (!reqData) {
+      throw new RpcException({ statusCode: 404, message: `Requerimiento #${params.requerimientoId} no encontrado` });
+    }
+
+    const eventos = await this.fetchAuditoria(params.requerimientoId);
+    const storagePath = reqData.storagePath || `/${params.requerimientoId}`;
+
+    const pdfDoc = await PDFDocument.create();
+    let page = pdfDoc.addPage([595, 842]);
+    const { width, height } = page.getSize();
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const primary = rgb(0.08, 0.16, 0.38);
+    const accent = rgb(0.18, 0.47, 0.87);
+    const gray = rgb(0.5, 0.5, 0.5);
+    const black = rgb(0, 0, 0);
+    const white = rgb(1, 1, 1);
+
+    page.drawRectangle({ x: 0, y: height - 80, width, height: 80, color: primary });
+    page.drawText('SGD — Reporte de Auditoria de Cierre', { x: 40, y: height - 35, font: fontBold, size: 16, color: white });
+    page.drawText(`Requerimiento ${reqData.codigoTicket} · ISO 30300`, { x: 40, y: height - 55, font: fontRegular, size: 9, color: white });
+    page.drawText(new Date().toLocaleString('es-CL'), { x: width - 180, y: height - 45, font: fontRegular, size: 9, color: white });
+
+    let y = height - 110;
+    const linea = (label: string, value: string) => {
+      page.drawText(label, { x: 40, y, font: fontBold, size: 9, color: gray });
+      page.drawText(value || '—', { x: 170, y, font: fontRegular, size: 10, color: black });
+      y -= 18;
+    };
+    linea('Titulo:', reqData.titulo);
+    linea('Estado:', reqData.estado);
+    linea('Contratista:', reqData.contratistaNombre || `ID ${reqData.contratistaId}`);
+    linea('Proyecto:', reqData.proyectoNombre || `ID ${reqData.proyectoId}`);
+    linea('Fecha cierre:', reqData.fechaCierre ? new Date(reqData.fechaCierre).toLocaleString('es-CL') : '—');
+    linea('Total de eventos:', String(eventos.length));
+
+    y -= 12;
+    page.drawText('TRAZABILIDAD DE ACCIONES', { x: 40, y, font: fontBold, size: 11, color: primary });
+    y -= 8;
+    page.drawRectangle({ x: 40, y, width: width - 80, height: 1, color: accent });
+    y -= 18;
+
+    page.drawText('Fecha/Hora', { x: 45, y, font: fontBold, size: 8, color: black });
+    page.drawText('Accion', { x: 170, y, font: fontBold, size: 8, color: black });
+    page.drawText('Usuario', { x: 250, y, font: fontBold, size: 8, color: black });
+    page.drawText('Detalle', { x: 390, y, font: fontBold, size: 8, color: black });
+    y -= 14;
+
+    if (eventos.length === 0) {
+      page.drawText('Sin eventos de auditoria registrados para este requerimiento.', { x: 45, y, font: fontRegular, size: 9, color: gray });
+      y -= 16;
+    } else {
+      for (const ev of eventos) {
+        if (y < 60) {
+          page = pdfDoc.addPage([595, 842]);
+          y = height - 60;
+        }
+        const fecha = new Date(ev.timestamp).toLocaleString('es-CL');
+        const usuario = ev.usuarioEmail || (ev.usuarioId ? `ID ${ev.usuarioId}` : 'sistema');
+        const detalle = (ev.ruta || ev.entidad || '').toString();
+        page.drawText(fecha, { x: 45, y, font: fontRegular, size: 7, color: black });
+        page.drawText(String(ev.accion), { x: 170, y, font: fontRegular, size: 7, color: black });
+        page.drawText(usuario.length > 24 ? usuario.slice(0, 23) + '…' : usuario, { x: 250, y, font: fontRegular, size: 7, color: black });
+        page.drawText(detalle.length > 30 ? detalle.slice(0, 29) + '…' : detalle, { x: 390, y, font: fontRegular, size: 7, color: gray });
+        y -= 13;
+      }
+    }
+
+    const pdfBuffer = Buffer.from(await pdfDoc.save());
+    const sha256Hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+    const pdfFilename = `reporte_auditoria_${reqData.codigoTicket}_${Date.now()}.pdf`;
+
+    await this.seaweedFsService.uploadFile(storagePath, pdfFilename, pdfBuffer, 'application/pdf');
+    const doc = await this.documentosService.upload({
+      nombreOriginal: pdfFilename,
+      mimeType: 'application/pdf',
+      tamañoBytes: pdfBuffer.length,
+      requerimientoId: params.requerimientoId,
+      autorId: params.generadoPorId,
+      creadoPor: `usuario_${params.generadoPorId}`,
+      fileBase64: pdfBuffer.toString('base64'),
+      storagePath,
+    });
+    await this.dataSource.query(
+      `UPDATE documentos SET "estadoDocumento" = $1, "sha256Hash" = $2 WHERE id = $3`,
+      [EstadoDocumento.OFICIAL, sha256Hash, doc.id],
+    );
+
+    this.logger.log(`Reporte de auditoria generado: ${pdfFilename} (${eventos.length} eventos), SHA-256: ${sha256Hash}`);
+    return { documentoId: doc.id, sha256Hash };
+  }
+
+  /**
+   * Lee el log de auditoría del requerimiento desde la tabla `auditoria`
+   * (propiedad de ms-auditoria) en la BD compartida. Si la tabla aún no existe
+   * o falla la consulta, devuelve lista vacía para no bloquear el reporte.
+   */
+  private async fetchAuditoria(requerimientoId: number): Promise<any[]> {
+    try {
+      return await this.dataSource.query(
+        `SELECT accion, entidad, "usuarioId", "usuarioEmail", ruta, timestamp
+         FROM auditoria WHERE "requerimientoId" = $1 ORDER BY timestamp ASC`,
+        [requerimientoId],
+      );
+    } catch (err) {
+      this.logger.warn(`No se pudo leer el log de auditoria del requerimiento ${requerimientoId}: ${err?.message}`);
+      return [];
+    }
   }
 }

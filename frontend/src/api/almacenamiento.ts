@@ -217,6 +217,25 @@ export const almacenamientoApi = {
   },
 
   /**
+   * HU-N8: Generar y archivar el reporte de auditoría de cierre del requerimiento.
+   * Solo supervisor/admin/gerente. El reporte se guarda como documento OFICIAL
+   * en el expediente del requerimiento.
+   */
+  async generarReporteCierre(
+    requerimientoId: number,
+  ): Promise<{ documentoId: number; sha256Hash: string }> {
+    const res = await fetch(`${API_BASE}/reporte-cierre/${requerimientoId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Error generando el reporte de cierre' }));
+      throw new Error(err.message || 'Error generando el reporte de cierre');
+    }
+    return res.json();
+  },
+
+  /**
    * Eliminar documento
    */
   async delete(id: number): Promise<void> {
@@ -245,7 +264,8 @@ export const almacenamientoApi = {
 
   /**
    * HU-11: Estampar firma en un PDF y descargar el resultado.
-   * No se guarda en el sistema — el documento original queda intacto.
+   * El PDF firmado reemplaza al original en el sistema y se registra quién
+   * firmó y cuándo (firmadoEn/firmadoPorId).
    */
   async firmarDocumento(
     id: number,

@@ -170,4 +170,15 @@ export class DocumentosRepository {
   async updateEstado(id: number, estado: EstadoDocumento): Promise<void> {
     await this.repo.update(id, { estadoDocumento: estado });
   }
+
+  /**
+   * Persiste la firma digital de un documento (HU-11): marca quién firmó y
+   * cuándo, y refresca hash/tamaño porque el archivo firmado reemplaza al original.
+   */
+  async marcarFirmado(
+    id: number,
+    data: { firmadoEn: Date; firmadoPorId: number; sha256Hash: string; tamañoBytes: number },
+  ): Promise<void> {
+    await this.repo.update(id, data);
+  }
 }
