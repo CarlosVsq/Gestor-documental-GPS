@@ -24,20 +24,25 @@ import { ClientProxy } from '@nestjs/microservices';
 import { callService } from '../common/rpc.utils';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { PermissionsGuard } from './guards/permissions.guard';
 import { Roles } from './decorators/roles.decorator';
-import { Role, SERVICE_NAMES, AUTH_PATTERNS } from '../common/constants';
+import { Permissions } from './decorators/permissions.decorator';
+import { Role, Permission, SERVICE_NAMES, AUTH_PATTERNS } from '../common/constants';
 import { AuthExceptionFilter } from '../common/auth-exception.filter';
 
 /**
- * Gateway Controller de Auth — HU-25/HU-19
+ * Gateway Controller de Auth — HU-25/HU-17/HU-10
  * Proxy HTTP → TCP hacia ms-auth.
+ * 
+ * HU-17: Endpoints protegidos con @Permissions() para control granular.
+ * HU-10: Guard chain: JwtAuthGuard → RolesGuard → PermissionsGuard.
  */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthGatewayController {
   constructor(
     @Inject(SERVICE_NAMES.AUTH) private readonly authClient: ClientProxy,
-  ) {}
+  ) { }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -60,20 +65,21 @@ export class AuthGatewayController {
   }
 
   @Get('users')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(Permission.MANAGE_USERS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Listar todos los usuarios' })
+  @ApiOperation({ summary: 'Listar todos los usuarios (solo admin)' })
   @ApiResponse({ status: 200, description: 'Lista de usuarios' })
+  @ApiResponse({ status: 403, description: 'Sin permisos' })
   async findAll() {
     return callService(this.authClient.send(AUTH_PATTERNS.FIND_ALL_USERS, {}));
   }
 
   @Get('users/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(Permission.MANAGE_USERS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obtener un usuario por ID' })
+  @ApiOperation({ summary: 'Obtener un usuario por ID (solo admin)' })
   @ApiResponse({ status: 200, description: 'Usuario encontrado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
@@ -81,10 +87,10 @@ export class AuthGatewayController {
   }
 
   @Post('users')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(Permission.MANAGE_USERS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Crear un nuevo usuario' })
+  @ApiOperation({ summary: 'Crear un nuevo usuario (solo admin)' })
   @ApiResponse({ status: 201, description: 'Usuario creado' })
   @ApiResponse({ status: 409, description: 'Email ya registrado' })
   async createUser(@Body() dto: any) {
@@ -92,10 +98,10 @@ export class AuthGatewayController {
   }
 
   @Put('users/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(Permission.MANAGE_USERS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Actualizar un usuario' })
+  @ApiOperation({ summary: 'Actualizar un usuario (solo admin)' })
   @ApiResponse({ status: 200, description: 'Usuario actualizado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async updateUser(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
@@ -103,13 +109,27 @@ export class AuthGatewayController {
   }
 
   @Patch('users/:id/toggle')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(Permission.MANAGE_USERS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Activar/Desactivar un usuario' })
+  @ApiOperation({ summary: 'Activar/Desactivar un usuario (solo admin)' })
   @ApiResponse({ status: 200, description: 'Estado del usuario cambiado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async toggleActive(@Param('id', ParseIntPipe) id: number) {
     return callService(this.authClient.send(AUTH_PATTERNS.TOGGLE_USER, { id }));
+  }
+
+  // ============================================================
+  // HU-17: Roles
+  // ============================================================
+
+  @Get('roles')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(Permission.MANAGE_USERS)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar todos los roles con sus permisos' })
+  @ApiResponse({ status: 200, description: 'Lista de roles' })
+  async findAllRoles() {
+    return callService(this.authClient.send(AUTH_PATTERNS.FIND_ALL_ROLES, {}));
   }
 }

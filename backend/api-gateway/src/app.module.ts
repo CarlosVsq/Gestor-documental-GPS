@@ -20,6 +20,11 @@ import { RequerimientosGatewayModule } from './requerimientos/requerimientos-gat
 import { AuditoriaGatewayModule } from './auditoria/auditoria-gateway.module';
 import { AuditoriaInterceptor } from './common/interceptors/auditoria.interceptor';
 
+// HU-27: Configuración de sesión
+import { ConfigGatewayModule } from './config/config-gateway.module';
+// HU-34/HU-35: Notificaciones
+import { NotificacionesGatewayModule } from './notificaciones/notificaciones-gateway.module';
+
 @Module({
   imports: [
     // Conexiones TCP a los microservicios (Global)
@@ -50,6 +55,9 @@ import { AuditoriaInterceptor } from './common/interceptors/auditoria.intercepto
     RequerimientosGatewayModule,
     AlmacenamientoGatewayModule,
     AuditoriaGatewayModule,
+    // Nuevos módulos
+    ConfigGatewayModule,
+    NotificacionesGatewayModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor },
