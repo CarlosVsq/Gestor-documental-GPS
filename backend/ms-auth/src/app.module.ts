@@ -4,6 +4,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from './entities/user.entity';
+import { RoleEntity } from './entities/role.entity';
+import { PermissionEntity } from './entities/permission.entity';
+import { RolePermission } from './entities/role-permission.entity';
 
 const isProduction = !!process.env.DB_HOST;
 
@@ -28,7 +31,7 @@ const isProduction = !!process.env.DB_HOST;
             synchronize: true,
           },
     ),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RoleEntity, PermissionEntity, RolePermission]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'sgd-dev-secret-key-2026',
       signOptions: {
