@@ -4,6 +4,9 @@ import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 import { User } from './entities/user.entity';
+import { RoleEntity } from './entities/role.entity';
+import { PermissionEntity } from './entities/permission.entity';
+import { RolePermission } from './entities/role-permission.entity';
 import { Role } from './common/constants';
 import * as bcrypt from 'bcrypt';
 
@@ -31,6 +34,28 @@ describe('AuthService', () => {
     sign: jest.fn(),
   };
 
+  // HU-17: repos de roles/permisos granulares añadidos al constructor de AuthService.
+  const mockRoleRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockPermissionRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockRolePermissionRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,6 +63,18 @@ describe('AuthService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
+        },
+        {
+          provide: getRepositoryToken(RoleEntity),
+          useValue: mockRoleRepository,
+        },
+        {
+          provide: getRepositoryToken(PermissionEntity),
+          useValue: mockPermissionRepository,
+        },
+        {
+          provide: getRepositoryToken(RolePermission),
+          useValue: mockRolePermissionRepository,
         },
         {
           provide: JwtService,
@@ -48,6 +85,9 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
     jest.clearAllMocks();
+    // HU-17: aislamos la resolución de permisos; cada test de método no debe
+    // depender del contenido de ROLE_PERMISSIONS_MAP ni de la BD de roles.
+    jest.spyOn(service, 'getPermissionsForRole').mockResolvedValue([]);
   });
 
   it('debería estar definido', () => {
@@ -65,6 +105,7 @@ describe('AuthService', () => {
         email: 'admin@sgd.cl',
         password: 'hashed_pw',
         rol: 'admin',
+        contratistaId: null,
         activo: true,
       };
 
@@ -75,17 +116,27 @@ describe('AuthService', () => {
       const result = await service.login({ email: 'admin@sgd.cl', password: 'admin123' });
 
       expect(result.access_token).toBe('jwt_token_123');
+      // HU-17: el user ahora incluye permissions[]; HU-N3: contratistaId.
       expect(result.user).toEqual({
         id: 1,
         nombre: 'Admin SGD',
         email: 'admin@sgd.cl',
         rol: 'admin',
+        permissions: [],
+        contratistaId: null,
       });
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        sub: 1,
-        email: 'admin@sgd.cl',
-        rol: 'admin',
-      });
+      // HU-17/HU-10: el payload firmado lleva nombre, permissions, contratistaId y jti (uuid aleatorio).
+      expect(mockJwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sub: 1,
+          email: 'admin@sgd.cl',
+          nombre: 'Admin SGD',
+          rol: 'admin',
+          permissions: [],
+          contratistaId: null,
+          jti: expect.any(String),
+        }),
+      );
     });
 
     it('debería lanzar RpcException si el email no existe', async () => {
@@ -129,12 +180,14 @@ describe('AuthService', () => {
       const result = await service.getProfile(1);
 
       expect(result).not.toHaveProperty('password');
+      // HU-17: getProfile añade permissions[] resueltos para el rol.
       expect(result).toEqual({
         id: 1,
         nombre: 'Admin',
         email: 'admin@sgd.cl',
         rol: 'admin',
         activo: true,
+        permissions: [],
       });
     });
 

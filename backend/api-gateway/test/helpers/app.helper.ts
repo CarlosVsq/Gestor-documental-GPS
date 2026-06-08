@@ -4,21 +4,64 @@ import * as jwt from 'jsonwebtoken';
 import { of } from 'rxjs';
 import { AppModule } from '../../src/app.module';
 import { RpcExceptionFilter } from '../../src/common/rpc-exception.filter';
-import { SERVICE_NAMES } from '../../src/common/constants';
+import { SERVICE_NAMES, Permission } from '../../src/common/constants';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'sgd-dev-secret-key-2026';
+
+/**
+ * HU-17: permisos granulares por rol. Refleja ROLE_PERMISSIONS_MAP de ms-auth
+ * para que los JWT de prueba lleven los permisos que PermissionsGuard verifica.
+ */
+const COLLAB_PERMS = [
+  Permission.CREATE_REQUERIMIENTO,
+  Permission.UPLOAD_DOCUMENT,
+  Permission.DOWNLOAD_DOCUMENT,
+  Permission.SIGN_DOCUMENT,
+];
+const STAFF_PERMS = [
+  Permission.READ_ALL_REQUERIMIENTOS,
+  Permission.CREATE_REQUERIMIENTO,
+  Permission.CHANGE_REQUERIMIENTO_STATE,
+  Permission.CLOSE_REQUERIMIENTO,
+  Permission.UPLOAD_DOCUMENT,
+  Permission.DOWNLOAD_DOCUMENT,
+  Permission.SIGN_DOCUMENT,
+  Permission.DELETE_DOCUMENT,
+  Permission.READ_AUDIT_LOG,
+  Permission.VIEW_REPORTS,
+];
+
+const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  admin: Object.values(Permission),
+  supervisor: STAFF_PERMS,
+  gerente: STAFF_PERMS,
+  colaborador: COLLAB_PERMS,
+  contratista: [
+    Permission.CREATE_REQUERIMIENTO,
+    Permission.UPLOAD_DOCUMENT,
+    Permission.DOWNLOAD_DOCUMENT,
+  ],
+  auditor: [
+    Permission.READ_ALL_REQUERIMIENTOS,
+    Permission.DOWNLOAD_DOCUMENT,
+    Permission.READ_AUDIT_LOG,
+    Permission.VIEW_REPORTS,
+  ],
+};
 
 export function makeToken(payload: {
   id?: number;
   email?: string;
   rol: string;
   contratistaId?: number;
+  permissions?: string[];
 }): string {
   return jwt.sign(
     {
       sub: payload.id ?? 1,
       email: payload.email ?? 'test@sgd.cl',
       rol: payload.rol,
+      permissions: payload.permissions ?? ROLE_PERMISSIONS[payload.rol] ?? [],
       contratistaId: payload.contratistaId ?? null,
     },
     JWT_SECRET,
