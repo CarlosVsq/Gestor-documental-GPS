@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditoriaModule } from './auditoria/auditoria.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
 
 const isProduction = !!process.env.DB_HOST;
 
@@ -26,6 +27,7 @@ const isProduction = !!process.env.DB_HOST;
           },
     ),
     AuditoriaModule,
+    NotificacionesModule,
   ],
   controllers: [],
   providers: [],

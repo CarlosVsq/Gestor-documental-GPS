@@ -1,4 +1,6 @@
 import type { ActivePage } from '../App';
+import { useAuth } from '../context/AuthContext';
+import { Permission, hasAnyPermission } from '../common/permissions';
 
 interface SidebarProps {
   activePage: ActivePage;
@@ -7,7 +9,15 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-const menuItems: { id: ActivePage; label: string; icon: JSX.Element; section?: string }[] = [
+interface MenuItem {
+  id: ActivePage;
+  label: string;
+  icon: JSX.Element;
+  section?: string;
+  permissions?: string[];
+}
+
+const menuItems: MenuItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
@@ -18,55 +28,70 @@ const menuItems: { id: ActivePage; label: string; icon: JSX.Element; section?: s
     id: 'contratistas',
     label: 'Contratistas',
     section: 'MANTENEDORES',
+    permissions: [Permission.MANAGE_MANTENEDORES],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3" /><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4" /><path d="m21 3 1 11h-2" /><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" /><path d="M3 4h8" /></svg>,
   },
   {
     id: 'areas',
     label: 'Áreas',
+    permissions: [Permission.MANAGE_MANTENEDORES],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>,
   },
   {
     id: 'categorias',
     label: 'Categorías',
+    permissions: [Permission.MANAGE_MANTENEDORES],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h7" /></svg>,
   },
   {
     id: 'subtipos',
     label: 'Subtipos',
+    permissions: [Permission.MANAGE_MANTENEDORES],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>,
   },
   {
     id: 'proyectos',
     label: 'Proyectos',
+    permissions: [Permission.MANAGE_MANTENEDORES],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>,
   },
   {
     id: 'requerimientos',
     label: 'Requerimientos',
     section: 'GESTIÓN',
+    permissions: [Permission.READ_ALL_REQUERIMIENTOS, Permission.CREATE_REQUERIMIENTO],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
   },
   {
     id: 'almacenamiento',
     label: 'Almacenamiento',
+    permissions: [Permission.UPLOAD_DOCUMENT, Permission.DOWNLOAD_DOCUMENT],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2" /><rect x="2" y="14" width="20" height="8" rx="2" ry="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>,
   },
   {
     id: 'reportes',
     label: 'Reportes',
     section: 'ANALÍTICA',
+    permissions: [Permission.VIEW_REPORTS],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>,
   },
   {
     id: 'usuarios',
     label: 'Usuarios',
     section: 'CONFIGURACIÓN',
+    permissions: [Permission.MANAGE_USERS],
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
   },
 ];
 
 export default function Sidebar({ activePage, onNavigate, collapsed, onToggle }: SidebarProps) {
+  const { user } = useAuth();
   let lastSection = '';
+
+  // Filtrar los items de menú basados en permisos
+  const visibleMenuItems = menuItems.filter(item => {
+    return !item.permissions || hasAnyPermission(user?.permissions, item.permissions);
+  });
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -97,9 +122,16 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle }:
         </button>
       </div>
 
+      {/* Info Badge para Contratista (HU-N3 visual warning) */}
+      {!collapsed && user?.rol === 'contratista' && (
+        <div className="sidebar-contratista-badge">
+          <span>Vista Filtrada por Empresa</span>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
 

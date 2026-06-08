@@ -18,6 +18,8 @@ export const REQUERIMIENTOS_PATTERNS = {
 export const ALMACENAMIENTO_PATTERNS = {
   CREATE_EXPEDIENTE: 'almacenamiento.expediente.create',
   FIND_BY_REQUERIMIENTO: 'almacenamiento.findByRequerimiento',
+  /** HU-N8: Genera PDF de reporte de auditoría de cierre */
+  GENERATE_REPORTE_CIERRE: 'almacenamiento.pdf.reporteCierre',
 } as const;
 
 /** Token de inyección del cliente TCP hacia ms-almacenamiento */

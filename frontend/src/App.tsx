@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ContratistaForm from './components/ContratistaForm';
@@ -23,6 +23,12 @@ import { areasApi } from './api/areas';
 import type { Area, CreateAreaDto, AreaStats } from './api/areas';
 import { proyectosApi } from './api/proyectos';
 import type { Proyecto, CreateProyectoDto, ProyectoStats } from './api/proyectos';
+import { Permission } from './common/permissions';
+import { useIdleTimer } from './hooks/useIdleTimer';
+import IdleWarningModal from './components/IdleWarningModal';
+import NotificationBell from './components/NotificationBell';
+import NotificationPanel from './components/NotificationPanel';
+import { notificacionesApi, type Notificacion } from './api/notificaciones';
 
 export type ActivePage = 'dashboard' | 'contratistas' | 'areas' | 'proyectos' | 'categorias' | 'subtipos' | 'requerimientos' | 'almacenamiento' | 'reportes' | 'usuarios';
 
@@ -56,10 +62,69 @@ const getPageHeaderInfo = (page: ActivePage) => {
 
 function AppLayout() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
-  const initialPage = (location.state?.initialPage as ActivePage) || 'dashboard';
-  const [activePage, setActivePage] = useState<ActivePage>(initialPage);
+  const [activePage, setActivePage] = useState<ActivePage>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Sincronizar URL -> activePage al cargar o cambiar de ruta en el navegador
+  useEffect(() => {
+    const path = location.pathname.substring(1); // Remover la primera barra '/'
+    const validPages: ActivePage[] = ['dashboard', 'contratistas', 'areas', 'proyectos', 'categorias', 'subtipos', 'requerimientos', 'almacenamiento', 'reportes', 'usuarios'];
+    if (validPages.includes(path as ActivePage)) {
+      setActivePage(path as ActivePage);
+    } else if (location.pathname === '/') {
+      setActivePage('dashboard');
+    }
+  }, [location.pathname]);
+
+  // Sincronizar activePage -> URL al navegar
+  const handleNavigate = useCallback((page: ActivePage) => {
+    setActivePage(page);
+    navigate(`/${page === 'dashboard' ? '' : page}`);
+  }, [navigate]);
+
+  // --- Inactividad (HU-27) ---
+  const { showWarning, remainingTime, warningMessage, resetTimers } = useIdleTimer();
+
+  // --- Notificaciones SSE (HU-34/35) ---
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+
+  useEffect(() => {
+    // Suscribirse al stream de notificaciones mediante SSE
+    const unsubscribe = notificacionesApi.subscribeToStream((data) => {
+      setNotificaciones(data.notificaciones);
+      setUnreadCount(data.count);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await notificacionesApi.marcarLeida(id);
+      setNotificaciones(prev =>
+        prev.map(n => (n.id === id ? { ...n, leida: true } : n))
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificacionesApi.marcarTodasLeidas();
+      setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // --- Contratistas state (reutilizado en Dashboard y ContratistasPage) ---
   const [contratistas, setContratistas] = useState<Contratista[]>([]);
@@ -92,8 +157,8 @@ function AppLayout() {
   const handleNavigateToDocs = useCallback((req: Requerimiento) => {
     if (!req.storagePath) return;
     setPrefilledReq({ id: req.id, codigoTicket: req.codigoTicket, storagePath: req.storagePath });
-    setActivePage('almacenamiento');
-  }, []);
+    handleNavigate('almacenamiento');
+  }, [handleNavigate]);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -267,125 +332,148 @@ function AppLayout() {
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':
-        return <Dashboard stats={stats} totalContratistas={total} areasTotal={areasTotal} proyectosTotal={proyectosTotal} onNavigate={setActivePage} />;
+        return <Dashboard stats={stats} totalContratistas={total} areasTotal={areasTotal} proyectosTotal={proyectosTotal} onNavigate={handleNavigate} />;
 
       case 'contratistas':
         return (
-          <div className="page-content">
-            <div style={{ marginBottom: '20px' }}>
-              <button className="btn btn-primary" onClick={() => { setEditingContratista(null); setShowForm(true); }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                Nuevo Contratista
-              </button>
-            </div>
-            <div className="mini-stats-bar">
-              <div className="mini-stat"><span className="mini-stat-value">{stats.total}</span><span className="mini-stat-label">Total</span></div>
-              <div className="mini-stat"><span className="mini-stat-value active-val">{stats.activos}</span><span className="mini-stat-label">Activos</span></div>
-              <div className="mini-stat"><span className="mini-stat-value inactive-val">{stats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
-            </div>
-            <ContratistasTable contratistas={contratistas} total={total} onEdit={(c) => { setEditingContratista(c); setShowForm(true); }} onToggle={handleToggle} loading={loading} />
-            {showForm && (
-              <div className="modal-overlay" onClick={() => { setEditingContratista(null); setShowForm(false); }}>
-                <div className="modal-content" onClick={e => e.stopPropagation()}>
-                  <ContratistaForm
-                    onSubmit={editingContratista ? handleUpdate : handleCreate}
-                    initialData={editingContratista ? { nombre: editingContratista.nombre, rut: editingContratista.rut, email: editingContratista.email, telefono: editingContratista.telefono } : undefined}
-                    isEditing={!!editingContratista}
-                    onCancel={() => { setEditingContratista(null); setShowForm(false); }}
-                  />
-                </div>
+          <ProtectedRoute requiredPermissions={[Permission.MANAGE_MANTENEDORES]}>
+            <div className="page-content">
+              <div style={{ marginBottom: '20px' }}>
+                <button className="btn btn-primary" onClick={() => { setEditingContratista(null); setShowForm(true); }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  Nuevo Contratista
+                </button>
               </div>
-            )}
-          </div>
+              <div className="mini-stats-bar">
+                <div className="mini-stat"><span className="mini-stat-value">{stats.total}</span><span className="mini-stat-label">Total</span></div>
+                <div className="mini-stat"><span className="mini-stat-value active-val">{stats.activos}</span><span className="mini-stat-label">Activos</span></div>
+                <div className="mini-stat"><span className="mini-stat-value inactive-val">{stats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
+              </div>
+              <ContratistasTable contratistas={contratistas} total={total} onEdit={(c) => { setEditingContratista(c); setShowForm(true); }} onToggle={handleToggle} loading={loading} />
+              {showForm && (
+                <div className="modal-overlay" onClick={() => { setEditingContratista(null); setShowForm(false); }}>
+                  <div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <ContratistaForm
+                      onSubmit={editingContratista ? handleUpdate : handleCreate}
+                      initialData={editingContratista ? { nombre: editingContratista.nombre, rut: editingContratista.rut, email: editingContratista.email, telefono: editingContratista.telefono } : undefined}
+                      isEditing={!!editingContratista}
+                      onCancel={() => { setEditingContratista(null); setShowForm(false); }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </ProtectedRoute>
         );
 
       case 'areas':
         return (
-          <div className="page-content">
-            <div style={{ marginBottom: '20px' }}>
-              <button className="btn btn-primary" onClick={() => { setEditingArea(null); setShowAreaForm(true); }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                Nueva Área
-              </button>
-            </div>
-            <div className="mini-stats-bar">
-              <div className="mini-stat"><span className="mini-stat-value">{areasStats.total}</span><span className="mini-stat-label">Total</span></div>
-              <div className="mini-stat"><span className="mini-stat-value active-val">{areasStats.activas}</span><span className="mini-stat-label">Activas</span></div>
-              <div className="mini-stat"><span className="mini-stat-value inactive-val">{areasStats.inactivas}</span><span className="mini-stat-label">Inactivas</span></div>
-            </div>
-            <AreasTable areas={areas} total={areasTotal} onEdit={(a) => { setEditingArea(a); setShowAreaForm(true); }} onToggle={handleToggleArea} loading={areasLoading} />
-            {showAreaForm && (
-              <div className="modal-overlay" onClick={() => { setEditingArea(null); setShowAreaForm(false); }}>
-                <div className="modal-content" onClick={e => e.stopPropagation()}>
-                  <AreaForm
-                    onSubmit={editingArea ? handleUpdateArea : handleCreateArea}
-                    initialData={editingArea ? { nombre: editingArea.nombre, codigoArea: editingArea.codigoArea, descripcion: editingArea.descripcion || '', contratistaId: editingArea.contratistaId } : undefined}
-                    isEditing={!!editingArea}
-                    onCancel={() => { setEditingArea(null); setShowAreaForm(false); }}
-                    contratistas={contratistas}
-                  />
-                </div>
+          <ProtectedRoute requiredPermissions={[Permission.MANAGE_MANTENEDORES]}>
+            <div className="page-content">
+              <div style={{ marginBottom: '20px' }}>
+                <button className="btn btn-primary" onClick={() => { setEditingArea(null); setShowAreaForm(true); }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  Nueva Área
+                </button>
               </div>
-            )}
-          </div>
+              <div className="mini-stats-bar">
+                <div className="mini-stat"><span className="mini-stat-value">{areasStats.total}</span><span className="mini-stat-label">Total</span></div>
+                <div className="mini-stat"><span className="mini-stat-value active-val">{areasStats.activas}</span><span className="mini-stat-label">Activas</span></div>
+                <div className="mini-stat"><span className="mini-stat-value inactive-val">{areasStats.inactivas}</span><span className="mini-stat-label">Inactivas</span></div>
+              </div>
+              <AreasTable areas={areas} total={areasTotal} onEdit={(a) => { setEditingArea(a); setShowAreaForm(true); }} onToggle={handleToggleArea} loading={areasLoading} />
+              {showAreaForm && (
+                <div className="modal-overlay" onClick={() => { setEditingArea(null); setShowAreaForm(false); }}>
+                  <div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <AreaForm
+                      onSubmit={editingArea ? handleUpdateArea : handleCreateArea}
+                      initialData={editingArea ? { nombre: editingArea.nombre, codigoArea: editingArea.codigoArea, descripcion: editingArea.descripcion || '', contratistaId: editingArea.contratistaId } : undefined}
+                      isEditing={!!editingArea}
+                      onCancel={() => { setEditingArea(null); setShowAreaForm(false); }}
+                      contratistas={contratistas}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </ProtectedRoute>
         );
 
       case 'proyectos':
         return (
-          <div className="page-content">
-            <div style={{ marginBottom: '20px' }}>
-              <button className="btn btn-primary" onClick={() => { setEditingProyecto(null); setShowProyectoForm(true); }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                Nuevo Proyecto
-              </button>
-            </div>
-            <div className="mini-stats-bar">
-              <div className="mini-stat"><span className="mini-stat-value">{proyectosStats.total}</span><span className="mini-stat-label">Total</span></div>
-              <div className="mini-stat"><span className="mini-stat-value active-val">{proyectosStats.activos}</span><span className="mini-stat-label">Activos</span></div>
-              <div className="mini-stat"><span className="mini-stat-value inactive-val">{proyectosStats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
-            </div>
-            <ProyectosTable proyectos={proyectos} total={proyectosTotal} onEdit={(p) => { setEditingProyecto(p); setShowProyectoForm(true); }} onToggle={handleToggleProyecto} loading={proyectosLoading} />
-            {showProyectoForm && (
-              <div className="modal-overlay" onClick={() => { setEditingProyecto(null); setShowProyectoForm(false); }}>
-                <div className="modal-content" onClick={e => e.stopPropagation()}>
-                  <ProyectoForm
-                    onSubmit={editingProyecto ? handleUpdateProyecto : handleCreateProyecto}
-                    initialData={editingProyecto ? { nombre: editingProyecto.nombre, fechaInicio: editingProyecto.fechaInicio?.split('T')[0] || editingProyecto.fechaInicio, fechaFin: editingProyecto.fechaFin?.split('T')[0] || editingProyecto.fechaFin, areaId: editingProyecto.areaId, ubicacion: editingProyecto.ubicacion, presupuestoEstimado: editingProyecto.presupuestoEstimado, horasHombre: editingProyecto.horasHombre, estadoProyecto: editingProyecto.estadoProyecto } : undefined}
-                    isEditing={!!editingProyecto}
-                    onCancel={() => { setEditingProyecto(null); setShowProyectoForm(false); }}
-                    areas={areas}
-                  />
-                </div>
+          <ProtectedRoute requiredPermissions={[Permission.MANAGE_MANTENEDORES]}>
+            <div className="page-content">
+              <div style={{ marginBottom: '20px' }}>
+                <button className="btn btn-primary" onClick={() => { setEditingProyecto(null); setShowProyectoForm(true); }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  Nuevo Proyecto
+                </button>
               </div>
-            )}
-          </div>
+              <div className="mini-stats-bar">
+                <div className="mini-stat"><span className="mini-stat-value">{proyectosStats.total}</span><span className="mini-stat-label">Total</span></div>
+                <div className="mini-stat"><span className="mini-stat-value active-val">{proyectosStats.activos}</span><span className="mini-stat-label">Activos</span></div>
+                <div className="mini-stat"><span className="mini-stat-value inactive-val">{proyectosStats.inactivos}</span><span className="mini-stat-label">Inactivos</span></div>
+              </div>
+              <ProyectosTable proyectos={proyectos} total={proyectosTotal} onEdit={(p) => { setEditingProyecto(p); setShowProyectoForm(true); }} onToggle={handleToggleProyecto} loading={proyectosLoading} />
+              {showProyectoForm && (
+                <div className="modal-overlay" onClick={() => { setEditingProyecto(null); setShowProyectoForm(false); }}>
+                  <div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <ProyectoForm
+                      onSubmit={editingProyecto ? handleUpdateProyecto : handleCreateProyecto}
+                      initialData={editingProyecto ? { nombre: editingProyecto.nombre, fechaInicio: editingProyecto.fechaInicio?.split('T')[0] || editingProyecto.fechaInicio, fechaFin: editingProyecto.fechaFin?.split('T')[0] || editingProyecto.fechaFin, areaId: editingProyecto.areaId, ubicacion: editingProyecto.ubicacion, presupuestoEstimado: editingProyecto.presupuestoEstimado, horasHombre: editingProyecto.horasHombre, estadoProyecto: editingProyecto.estadoProyecto } : undefined}
+                      isEditing={!!editingProyecto}
+                      onCancel={() => { setEditingProyecto(null); setShowProyectoForm(false); }}
+                      areas={areas}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </ProtectedRoute>
         );
 
       case 'usuarios':
-        return <UsersPage onNotify={showNotification} />;
+        return (
+          <ProtectedRoute requiredPermissions={[Permission.MANAGE_USERS]}>
+            <UsersPage onNotify={showNotification} />
+          </ProtectedRoute>
+        );
 
       case 'categorias':
-        return <CategoriasPage onNotify={showNotification} />;
+        return (
+          <ProtectedRoute requiredPermissions={[Permission.MANAGE_MANTENEDORES]}>
+            <CategoriasPage onNotify={showNotification} />
+          </ProtectedRoute>
+        );
 
       case 'subtipos':
-        return <SubtiposPage onNotify={showNotification} />;
+        return (
+          <ProtectedRoute requiredPermissions={[Permission.MANAGE_MANTENEDORES]}>
+            <SubtiposPage onNotify={showNotification} />
+          </ProtectedRoute>
+        );
 
       case 'requerimientos':
-        return <RequerimientosPage onNotify={showNotification} onNavigateToDocs={handleNavigateToDocs} />;
+        return (
+          <ProtectedRoute requiredPermissions={[Permission.READ_ALL_REQUERIMIENTOS, Permission.CREATE_REQUERIMIENTO]}>
+            <RequerimientosPage onNotify={showNotification} onNavigateToDocs={handleNavigateToDocs} />
+          </ProtectedRoute>
+        );
 
       case 'almacenamiento':
         return (
-          <AlmacenamientoPage
-            onNotify={showNotification}
-            prefilledRequerimiento={prefilledReq}
-            onPrefillConsumed={() => setPrefilledReq(null)}
-          />
+          <ProtectedRoute requiredPermissions={[Permission.UPLOAD_DOCUMENT, Permission.DOWNLOAD_DOCUMENT]}>
+            <AlmacenamientoPage
+              onNotify={showNotification}
+              prefilledRequerimiento={prefilledReq}
+              onPrefillConsumed={() => setPrefilledReq(null)}
+            />
+          </ProtectedRoute>
         );
 
       default:
         return (
           <div className="page-content">
-
             <div className="empty-state">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
               <h3>Próximamente</h3>
@@ -401,7 +489,7 @@ function AppLayout() {
       {/* Sidebar */}
       <Sidebar
         activePage={activePage}
-        onNavigate={setActivePage}
+        onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
@@ -431,7 +519,14 @@ function AppLayout() {
               <p className="page-description" style={{ margin: 0, marginTop: '2px' }}>{getPageHeaderInfo(activePage).desc}</p>
             </div>
           </div>
-          <div className="topbar-right">
+          <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {/* Bell Icon for Notifications */}
+            <NotificationBell
+              count={unreadCount}
+              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+              panelOpen={showNotificationPanel}
+            />
+
             <div className="user-menu-container">
               <button className="user-menu-trigger" id="user-menu-trigger" onClick={() => setShowUserMenu(!showUserMenu)}>
                 <div className="user-avatar-sm">{user ? getInitials(user.nombre) : '?'}</div>
@@ -472,6 +567,26 @@ function AppLayout() {
         {/* Page Content */}
         {renderPage()}
       </div>
+
+      {/* Warning modal for idle timeout */}
+      {showWarning && (
+        <IdleWarningModal
+          remainingTime={remainingTime}
+          message={warningMessage}
+          onContinue={resetTimers}
+          onLogout={logout}
+        />
+      )}
+
+      {/* Notification drawer panel */}
+      <NotificationPanel
+        isOpen={showNotificationPanel}
+        onClose={() => setShowNotificationPanel(false)}
+        notificaciones={notificaciones}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
+      />
     </div>
   );
 }

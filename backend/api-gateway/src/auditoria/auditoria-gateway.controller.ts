@@ -10,20 +10,27 @@ import {
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 import { callService } from '../common/rpc.utils';
-import { SERVICE_NAMES, AUDITORIA_PATTERNS, Role } from '../common/constants';
+import { SERVICE_NAMES, AUDITORIA_PATTERNS, Permission } from '../common/constants';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 
+/**
+ * Gateway Controller de Auditoría — HU-17/HU-10
+ * Proxy HTTP → TCP hacia ms-auditoria.
+ * 
+ * HU-17: Acceso restringido a usuarios con permiso READ_AUDIT_LOG
+ * (Admin, Supervisor, Auditor).
+ */
 @ApiTags('auditoria')
 @Controller('auditoria')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.AUDITOR, Role.ADMIN)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Permissions(Permission.READ_AUDIT_LOG)
 @ApiBearerAuth()
 export class AuditoriaGatewayController {
   constructor(
     @Inject(SERVICE_NAMES.AUDITORIA) private readonly client: ClientProxy,
-  ) {}
+  ) { }
 
   @Get()
   @ApiOperation({ summary: 'Ultimos registros de auditoria' })

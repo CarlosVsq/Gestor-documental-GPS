@@ -3,9 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditoriaService } from './auditoria.service';
 import { AuditoriaController } from './auditoria.controller';
 import { Auditoria } from './entities/auditoria.entity';
+import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Auditoria])],
+  imports: [
+    TypeOrmModule.forFeature([Auditoria]),
+    NotificacionesModule,
+  ],
   controllers: [AuditoriaController],
   providers: [AuditoriaService],
   exports: [AuditoriaService],

@@ -161,7 +161,30 @@ export class RequerimientosService {
         }
 
         req.actualizadoPor = 'admin';
-        return this.requerimientoRepository.save(req);
+        const saved = await this.requerimientoRepository.save(req);
+
+        // HU-N8: Si el requerimiento se cerró, generar reporte de auditoría de cierre
+        // de forma fire-and-forget. El PDF se archiva en el expediente de SeaweedFS.
+        if (saved.estado === EstadoRequerimiento.CERRADO) {
+            this.almacenamientoClient
+                .send(ALMACENAMIENTO_PATTERNS.GENERATE_REPORTE_CIERRE, {
+                    requerimientoId: saved.id,
+                    generadoPorId: saved.usuarioCreadorId || 0,
+                })
+                .subscribe({
+                    next: (result: any) =>
+                        this.logger.log(
+                            `📄 HU-N8: Reporte de cierre generado para REQ #${saved.id} ` +
+                            `(doc #${result?.documentoId}, SHA-256: ${result?.sha256Hash?.substring(0, 16)}…)`,
+                        ),
+                    error: (err: any) =>
+                        this.logger.warn(
+                            `⚠️ HU-N8: No se pudo generar reporte de cierre para REQ #${saved.id}: ${err?.message}`,
+                        ),
+                });
+        }
+
+        return saved;
     }
 
     /**

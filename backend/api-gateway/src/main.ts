@@ -37,11 +37,15 @@ async function bootstrap() {
       'Proyecto desarrollado para la asignatura Gestión de Proyectos de Software - UBB.',
     )
     .setVersion('2.0')
-    .addTag('auth', 'Autenticación y Sesión (HU-25)')
+    .addTag('auth', 'Autenticación, Usuarios y Roles (HU-25, HU-17)')
     .addTag('contratistas', 'Gestión de Contratistas (HU-01)')
     .addTag('areas', 'Gestión de Áreas (HU-02)')
     .addTag('proyectos', 'Gestión de Proyectos (HU-03)')
+    .addTag('requerimientos', 'Gestión de Requerimientos / Tickets (HU-14)')
     .addTag('documentos', 'Gestión Documental (HU-07)')
+    .addTag('auditoria', 'Log de Auditoría inmutable (HU-16)')
+    .addTag('notificaciones', 'Notificaciones en tiempo real (HU-34, HU-35)')
+    .addTag('config', 'Configuración del sistema (HU-27)')
     .addBearerAuth()
     .build();
 
