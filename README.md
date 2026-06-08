@@ -2,7 +2,7 @@
 
 ## Proyecto
 
-Sistema de gestión documental desarrollado como "Hola Mundo" para la asignatura **Gestión de Proyectos de Software** — Universidad del Bío-Bío, 2026.
+Sistema de gestión documental  para la asignatura **Gestión de Proyectos de Software** — Universidad del Bío-Bío, 2026.
 
 ## Stack Tecnológico
 
@@ -119,14 +119,21 @@ cd frontend && npm run dev
 - **HU-26: Gestión de Usuarios internos**
 - **HU-28: Colaborador con formulario de requerimiento con campos predefinidos.** (Verificar posteriormente con el frontend final)
 
+
 - **HU-N1: Crear Requerimiento**
 - **HU-N2: Clasificar Requerimiento mediante Categoría y Subtipo**
 - **HU-N3: Control de Visibilidad por Contratista**
 
+---
 
+### Sistema de Control de Acceso y Visualización Dinámica (HU-10, HU-17, HU-27, HU-34, HU-35)
+El sistema implementa restricciones en la UI del frontend basadas en los permisos del usuario almacenados en el JWT decodificado:
+1. **ProtectedRoute**: Valida los permisos granulares requeridos por ruta, redirigiendo a la pantalla de Acceso Denegado (403) si no se cumplen.
+2. **Sidebar Dinámico**: Oculta secciones completas del menú de navegación que el usuario no tiene permisos para ver.
+3. **Contratistas (HU-N3)**: Muestra una advertencia visual ("Vista Filtrada por Empresa") en el sidebar para el rol de contratista, indicando que el contenido cargado está restringido a su propia organización.
+4. **Notificaciones por SSE**: Muestra actualizaciones en tiempo real de notificaciones mediante Server-Sent Events en la barra superior.
+5. **Control de Inactividad**: Termina la sesión del usuario tras periodos largos de inactividad, con un modal de advertencia visual interactivo.
 
-
-  
 ## Equipo
 
 - Diego Alamos Vallejos
