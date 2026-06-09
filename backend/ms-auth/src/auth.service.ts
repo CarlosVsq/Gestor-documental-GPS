@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { User } from './entities/user.entity';
 import { RoleEntity } from './entities/role.entity';
 import { PermissionEntity } from './entities/permission.entity';
@@ -63,7 +63,7 @@ export class AuthService {
   async login(loginDto: { email: string; password: string }) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     const permissions = await this.getPermissionsForRole(user.rol);
-    const jti = uuidv4();
+    const jti = randomUUID();
 
     const payload = {
       sub: user.id,
