@@ -74,10 +74,13 @@ export class AuditoriaService {
    * Se ejecuta de forma asíncrona para no bloquear la respuesta del registro.
    */
   private async dispararNotificaciones(audit: Auditoria): Promise<void> {
-    // HU-34: Subida de documento → notificar supervisores del requerimiento
+    // HU-34: Subida de documento → notificar supervisores del requerimiento.
+    // El interceptor deriva entidad del primer segmento de la URL ('almacenamiento'),
+    // y la ruta distingue uploads de usuario vs. docs del sistema (reporte-cierre, pdf).
     if (
       audit.accion === AccionAuditoria.CREATE &&
-      audit.entidad === 'documentos' &&
+      audit.entidad === 'almacenamiento' &&
+      (audit.ruta?.includes('/upload')) &&
       audit.requerimientoId
     ) {
       await this.notificarSubidaDocumento(audit);
