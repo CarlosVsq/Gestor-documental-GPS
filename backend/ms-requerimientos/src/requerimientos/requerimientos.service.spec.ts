@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
+import { of, throwError } from 'rxjs';
 import { RequerimientosService } from './requerimientos.service';
 import { Requerimiento, EstadoRequerimiento } from './requerimiento.entity';
+import { ALMACENAMIENTO_CLIENT, ALMACENAMIENTO_PATTERNS } from '../common/constants';
 
 /**
  * Test unitario del servicio de Requerimientos (HU-N1, HU-N2)
@@ -16,6 +18,19 @@ describe('RequerimientosService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     findAndCount: jest.fn(),
+    count: jest.fn(),
+  };
+
+  const mockAlmacenamientoClient = {
+    send: jest.fn().mockImplementation((pattern: string) => {
+      // El create() del service llama a expediente.create con .subscribe() (fire-and-forget).
+      if (pattern === ALMACENAMIENTO_PATTERNS.CREATE_EXPEDIENTE) {
+        return { subscribe: jest.fn() };
+      }
+      // Default para findByRequerimiento (HU-N7): devolvemos lista con 1 documento.
+      // Cada test puede sobreescribir esto con mockReturnValueOnce.
+      return of([{ id: 1, requerimientoId: 1 }]);
+    }),
   };
 
   beforeEach(async () => {
@@ -23,6 +38,7 @@ describe('RequerimientosService', () => {
       providers: [
         RequerimientosService,
         { provide: getRepositoryToken(Requerimiento), useValue: mockRepository },
+        { provide: ALMACENAMIENTO_CLIENT, useValue: mockAlmacenamientoClient },
       ],
     }).compile();
 
@@ -141,6 +157,184 @@ describe('RequerimientosService', () => {
 
       const result = await service.updateState(1, { estado: EstadoRequerimiento.CERRADO });
       expect(result.estado).toBe(EstadoRequerimiento.CERRADO);
+    });
+
+    // ─── HU-19: no cerrar con documentos PDF sin firmar ──────────
+    it('HU-19: debería bloquear el cierre si hay un PDF sin firmar', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockAlmacenamientoClient.send.mockReturnValueOnce(
+        of([{ id: 9, nombreOriginal: 'contrato.pdf', mimeType: 'application/pdf', firmadoEn: null }]),
+      );
+
+      await expect(
+        service.updateState(1, { estado: EstadoRequerimiento.CERRADO }),
+      ).rejects.toThrow(RpcException);
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('HU-19: debería permitir cerrar si todos los PDFs están firmados', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockRepository.save.mockResolvedValue({ ...req, estado: EstadoRequerimiento.CERRADO });
+      mockAlmacenamientoClient.send.mockReturnValueOnce(
+        of([{ id: 9, nombreOriginal: 'contrato.pdf', mimeType: 'application/pdf', firmadoEn: new Date() }]),
+      );
+
+      const result = await service.updateState(1, { estado: EstadoRequerimiento.CERRADO });
+      expect(result.estado).toBe(EstadoRequerimiento.CERRADO);
+    });
+
+    it('HU-19: documentos no-PDF (imágenes) no bloquean el cierre', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockRepository.save.mockResolvedValue({ ...req, estado: EstadoRequerimiento.CERRADO });
+      mockAlmacenamientoClient.send.mockReturnValueOnce(
+        of([{ id: 9, nombreOriginal: 'foto.png', mimeType: 'image/png', firmadoEn: null }]),
+      );
+
+      const result = await service.updateState(1, { estado: EstadoRequerimiento.CERRADO });
+      expect(result.estado).toBe(EstadoRequerimiento.CERRADO);
+    });
+
+    // ─── HU-N7: validación de expediente para EN_PROGRESO ────────
+    it('HU-N7: debería bloquear el paso a EN_PROGRESO si el expediente está vacío', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.ABIERTO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockAlmacenamientoClient.send.mockReturnValueOnce(of([]));
+
+      await expect(
+        service.updateState(1, { estado: EstadoRequerimiento.EN_PROGRESO }),
+      ).rejects.toThrow(RpcException);
+
+      expect(mockAlmacenamientoClient.send).toHaveBeenCalledWith(
+        ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO,
+        { requerimientoId: 1 },
+      );
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('HU-N7: NO debería consultar documentos si ya estaba en EN_PROGRESO', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.EN_PROGRESO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockRepository.save.mockResolvedValue(req);
+
+      await service.updateState(1, { estado: EstadoRequerimiento.EN_PROGRESO });
+
+      expect(mockAlmacenamientoClient.send).not.toHaveBeenCalledWith(
+        ALMACENAMIENTO_PATTERNS.FIND_BY_REQUERIMIENTO,
+        expect.anything(),
+      );
+    });
+
+    it('HU-N7: debería responder error si almacenamiento no está disponible', async () => {
+      const req = { id: 1, estado: EstadoRequerimiento.ABIERTO, actualizadoPor: 'admin' };
+      mockRepository.findOne.mockResolvedValue(req);
+      mockAlmacenamientoClient.send.mockReturnValueOnce(throwError(() => new Error('TCP down')));
+
+      await expect(
+        service.updateState(1, { estado: EstadoRequerimiento.EN_PROGRESO }),
+      ).rejects.toThrow(RpcException);
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── HU-23: getStats ──────────────────────────────────────
+  describe('getStats', () => {
+    it('devuelve conteos por estado, estancados y 8 puntos de tendencia', async () => {
+      // 5 counts base (total, abiertos, enProgreso, cerrados, estancados) +
+      // 16 counts de tendencia (8 semanas x 2). mockResolvedValue cubre todos.
+      mockRepository.count.mockResolvedValue(3);
+
+      const stats = await service.getStats();
+
+      expect(stats).toMatchObject({
+        total: 3,
+        abiertos: 3,
+        enProgreso: 3,
+        cerrados: 3,
+        estancados: 3,
+      });
+      expect(stats.tendencia).toHaveLength(8);
+      expect(stats.tendencia[0]).toHaveProperty('semana');
+      expect(stats.tendencia[0]).toHaveProperty('creados');
+      expect(stats.tendencia[0]).toHaveProperty('cerrados');
+      // 5 conteos base + 16 de tendencia
+      expect(mockRepository.count).toHaveBeenCalledTimes(21);
+    });
+
+    it('propaga el filtro de contratista a los conteos', async () => {
+      mockRepository.count.mockResolvedValue(0);
+      await service.getStats({ contratistaId: 7 });
+      expect(mockRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ contratistaId: 7 }),
+        }),
+      );
+    });
+  });
+
+  // ─── HU-22: getVolumenStats ───────────────────────────────
+  describe('getVolumenStats', () => {
+    const mockQb: any = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    };
+
+    beforeEach(() => {
+      (mockRepository as any).createQueryBuilder = jest.fn().mockReturnValue(mockQb);
+      jest.clearAllMocks();
+      mockQb.select.mockReturnValue(mockQb);
+      mockQb.addSelect.mockReturnValue(mockQb);
+      mockQb.where.mockReturnValue(mockQb);
+      mockQb.andWhere.mockReturnValue(mockQb);
+      mockQb.groupBy.mockReturnValue(mockQb);
+      mockQb.getRawMany.mockResolvedValue([
+        { contratistaId: '1', total: '5', abiertos: '2', enProgreso: '2', cerrados: '1' },
+      ]);
+      mockRepository.count.mockResolvedValue(3);
+    });
+
+    it('devuelve byContratista con conteos numéricos y mensual con 6 meses', async () => {
+      const result = await service.getVolumenStats();
+
+      expect(result.byContratista).toHaveLength(1);
+      expect(result.byContratista[0]).toEqual({
+        contratistaId: 1,
+        total: 5,
+        abiertos: 2,
+        enProgreso: 2,
+        cerrados: 1,
+      });
+      expect(result.mensual).toHaveLength(6);
+      expect(result.mensual[0]).toHaveProperty('mes');
+      expect(result.mensual[0]).toHaveProperty('creados');
+    });
+
+    it('aplica filtro contratistaId a la query de agrupación', async () => {
+      await service.getVolumenStats({ contratistaId: 7 });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'r."contratistaId" = :cId',
+        { cId: 7 },
+      );
+    });
+
+    it('aplica filtros de fecha cuando se proporcionan', async () => {
+      await service.getVolumenStats({ desde: '2026-01-01', hasta: '2026-06-01' });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'r."creadoEn" >= :desde',
+        { desde: '2026-01-01' },
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'r."creadoEn" <= :hasta',
+        { hasta: '2026-06-01' },
+      );
     });
   });
 });

@@ -32,8 +32,8 @@ export class ContratistasService {
 
     const contratista = this.contratistaRepository.create({
       ...createDto,
-      creadoPor: 'admin',
-      actualizadoPor: 'admin',
+      creadoPor: createDto.creadoPor || 'sistema',
+      actualizadoPor: createDto.creadoPor || 'sistema',
     });
     return this.contratistaRepository.save(contratista);
   }
@@ -80,17 +80,17 @@ export class ContratistasService {
     }
 
     Object.assign(contratista, updateDto);
-    contratista.actualizadoPor = 'admin';
+    contratista.actualizadoPor = updateDto.actualizadoPor || 'sistema';
     return this.contratistaRepository.save(contratista);
   }
 
   /**
    * CA-4: Desactivar/reactivar un contratista (toggle de estado)
    */
-  async toggle(id: number): Promise<{ activo: boolean }> {
+  async toggle(id: number, actualizadoPor?: string): Promise<{ activo: boolean }> {
     const contratista = await this.findOne(id);
     contratista.activo = !contratista.activo;
-    contratista.actualizadoPor = 'admin';
+    contratista.actualizadoPor = actualizadoPor || 'sistema';
     await this.contratistaRepository.save(contratista);
     return { activo: contratista.activo };
   }

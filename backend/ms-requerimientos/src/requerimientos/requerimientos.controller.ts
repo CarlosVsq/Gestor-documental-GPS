@@ -23,6 +23,16 @@ export class RequerimientosController {
     return this.requerimientosService.findAll(payload?.page, payload?.limit, payload?.filtros);
   }
 
+  @MessagePattern(REQUERIMIENTOS_PATTERNS.STATS)
+  getStats(@Payload() payload: { contratistaId?: number }) {
+    return this.requerimientosService.getStats(payload);
+  }
+
+  @MessagePattern(REQUERIMIENTOS_PATTERNS.VOLUMEN)
+  getVolumenStats(@Payload() payload: { contratistaId?: number; desde?: string; hasta?: string }) {
+    return this.requerimientosService.getVolumenStats(payload);
+  }
+
   @MessagePattern(REQUERIMIENTOS_PATTERNS.FIND_ONE)
   findOne(@Payload() id: number) {
     return this.requerimientosService.findOne(id);

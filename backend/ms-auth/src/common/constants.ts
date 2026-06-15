@@ -1,6 +1,6 @@
 /**
  * Constantes compartidas — ms-auth
- * Roles y patrones TCP de este servicio.
+ * Roles, permisos y patrones TCP de este servicio.
  */
 export enum Role {
   ADMIN = 'admin',
@@ -10,6 +10,100 @@ export enum Role {
   AUDITOR = 'auditor',
   CONTRATISTA = 'contratista',
 }
+
+/**
+ * Permisos granulares del sistema — HU-17
+ * Cada permiso representa una acción atómica que puede otorgarse a un rol.
+ */
+export enum Permission {
+  // Usuarios
+  MANAGE_USERS = 'manage_users',
+
+  // Mantenedores
+  MANAGE_MANTENEDORES = 'manage_mantenedores',
+
+  // Requerimientos
+  READ_ALL_REQUERIMIENTOS = 'read_all_requerimientos',
+  CREATE_REQUERIMIENTO = 'create_requerimiento',
+  CHANGE_REQUERIMIENTO_STATE = 'change_requerimiento_state',
+  CLOSE_REQUERIMIENTO = 'close_requerimiento',
+
+  // Documentos
+  UPLOAD_DOCUMENT = 'upload_document',
+  DOWNLOAD_DOCUMENT = 'download_document',
+  SIGN_DOCUMENT = 'sign_document',
+  DELETE_DOCUMENT = 'delete_document',
+
+  // Auditoría y Reportes
+  READ_AUDIT_LOG = 'read_audit_log',
+  VIEW_REPORTS = 'view_reports',
+
+  // Sistema
+  CONFIGURE_SYSTEM = 'configure_system',
+}
+
+/**
+ * Matriz de permisos por rol — HU-17
+ * Define qué permisos tiene cada rol por defecto.
+ * Se usa en el seed para poblar la tabla role_permissions.
+ */
+export const ROLE_PERMISSIONS_MAP: Record<Role, Permission[]> = {
+  [Role.ADMIN]: Object.values(Permission), // Todos los permisos
+  [Role.SUPERVISOR]: [
+    Permission.READ_ALL_REQUERIMIENTOS,
+    Permission.CREATE_REQUERIMIENTO,
+    Permission.CHANGE_REQUERIMIENTO_STATE,
+    Permission.CLOSE_REQUERIMIENTO,
+    Permission.UPLOAD_DOCUMENT,
+    Permission.DOWNLOAD_DOCUMENT,
+    Permission.SIGN_DOCUMENT,
+    Permission.DELETE_DOCUMENT,
+    Permission.READ_AUDIT_LOG,
+    Permission.VIEW_REPORTS,
+  ],
+  [Role.GERENTE]: [
+    Permission.READ_ALL_REQUERIMIENTOS,
+    Permission.CREATE_REQUERIMIENTO,
+    Permission.CHANGE_REQUERIMIENTO_STATE,
+    Permission.CLOSE_REQUERIMIENTO,
+    Permission.UPLOAD_DOCUMENT,
+    Permission.DOWNLOAD_DOCUMENT,
+    Permission.SIGN_DOCUMENT,
+    Permission.DELETE_DOCUMENT,
+    Permission.READ_AUDIT_LOG,
+    Permission.VIEW_REPORTS,
+  ],
+  [Role.COLABORADOR]: [
+    Permission.CREATE_REQUERIMIENTO,
+    Permission.UPLOAD_DOCUMENT,
+    Permission.DOWNLOAD_DOCUMENT,
+    Permission.SIGN_DOCUMENT,
+  ],
+  [Role.CONTRATISTA]: [
+    Permission.CREATE_REQUERIMIENTO,
+    Permission.UPLOAD_DOCUMENT,
+    Permission.DOWNLOAD_DOCUMENT,
+  ],
+  [Role.AUDITOR]: [
+    Permission.READ_ALL_REQUERIMIENTOS,
+    Permission.DOWNLOAD_DOCUMENT,
+    Permission.READ_AUDIT_LOG,
+    Permission.VIEW_REPORTS,
+  ],
+};
+
+/**
+ * Descripciones de roles — HU-17
+ */
+export const ROLE_DESCRIPTIONS: Record<Role, string> = {
+  [Role.ADMIN]: 'Control total del sistema. Gestión de usuarios, mantenedores y configuración.',
+  [Role.SUPERVISOR]: 'Supervisión de cumplimiento, cambio de estados, analítica y reportes.',
+  [Role.GERENTE]: 'Gestión y análisis, mismo nivel que supervisor.',
+  [Role.COLABORADOR]: 'Operación diaria: subir documentos, llenar formularios, firmar.',
+  [Role.CONTRATISTA]: 'Acceso restringido por empresa. Solo ve sus proyectos y requerimientos.',
+  [Role.AUDITOR]: 'Solo lectura. Revisión de trazabilidad y reportes ISO 30300.',
+};
+
 /**
  * ROLES DEL SISTEMA
  * 
@@ -18,7 +112,7 @@ export enum Role {
  *  Gestión de Usuarios: Puede crear, editar y aplicar soft delete a cualquier cuenta del sistema (HU-26).  
  *  Mantenedores: Es el único que puede gestionar la lista de Contratistas, Áreas, Proyectos, Categorías y Subtipos (HU-01 a HU-05).  
  *  Visibilidad Global: Tiene acceso a ver todos los requerimientos y documentos de todas las áreas y empresas.  \
- *  Configuración Técnica: Define los tiempos de inactividad y permisos a nivel de carpeta en SharePoint (HU-17, HU-27)
+ *  Configuración Técnica: Define los tiempos de inactividad y permisos a nivel de carpeta en Seaweedfs (HU-17, HU-27)
  * 
  * 2. Supervisor / Gerente (Gestión y Análisis)
  * Su rol está enfocado en la supervisión del cumplimiento y la toma de decisiones basada en datos.
@@ -58,4 +152,8 @@ export const AUTH_PATTERNS = {
   TOGGLE_USER: 'auth.users.toggle',
   SEED_ADMIN: 'auth.seedAdmin',
   VALIDATE_USER: 'auth.validateUser',
+  // HU-10: Nuevos patterns para validación JWT y roles
+  VERIFY_JWT: 'auth.verifyJwt',
+  GET_ROLE_PERMISSIONS: 'auth.role.getPermissions',
+  FIND_ALL_ROLES: 'auth.roles.findAll',
 } as const;

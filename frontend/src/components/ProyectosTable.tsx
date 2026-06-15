@@ -58,9 +58,11 @@ export default function ProyectosTable({ proyectos, total, onEdit, onToggle, loa
                                 <th>Código</th>
                                 <th>Área</th>
                                 <th>Contratista</th>
+                                <th>Ubicación</th>
                                 <th>Fecha Inicio</th>
                                 <th>Fecha Fin</th>
-                                <th>Estado</th>
+                                <th>Fase/Estado</th>
+                                <th>Estado Sistema</th>
                                 <th style={{ width: '100px' }}>Acciones</th>
                             </tr>
                         </thead>
@@ -86,8 +88,14 @@ export default function ProyectosTable({ proyectos, total, onEdit, onToggle, loa
                                     <td className="cell-muted">
                                         {p.area?.contratista ? p.area.contratista.nombre : '—'}
                                     </td>
+                                    <td className="cell-muted">{p.ubicacion || '—'}</td>
                                     <td className="cell-muted cell-date">{formatDate(p.fechaInicio)}</td>
                                     <td className="cell-muted cell-date">{formatDate(p.fechaFin)}</td>
+                                    <td>
+                                        <span className={`status-badge ${p.estadoProyecto === 'Finalizado' ? 'status-inactive' : 'status-active'}`}>
+                                            {p.estadoProyecto}
+                                        </span>
+                                    </td>
                                     <td>
                                         <span className={`status-badge ${p.activo ? 'status-active' : 'status-inactive'}`}>
                                             <span className="status-dot" />

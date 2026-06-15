@@ -10,6 +10,7 @@ const API_BASE = '/api/areas';
 export interface Area {
   id: number;
   nombre: string;
+  codigoArea: string;
   descripcion?: string;
   contratistaId: number;
   activo: boolean;
@@ -26,6 +27,7 @@ export interface Area {
 
 export interface CreateAreaDto {
   nombre: string;
+  codigoArea: string;
   descripcion?: string;
   contratistaId: number;
 }

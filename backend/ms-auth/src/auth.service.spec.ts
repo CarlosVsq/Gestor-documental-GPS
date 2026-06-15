@@ -4,6 +4,10 @@ import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 import { User } from './entities/user.entity';
+import { RoleEntity } from './entities/role.entity';
+import { PermissionEntity } from './entities/permission.entity';
+import { RolePermission } from './entities/role-permission.entity';
+import { Role } from './common/constants';
 import * as bcrypt from 'bcrypt';
 
 // Mock bcrypt
@@ -30,6 +34,28 @@ describe('AuthService', () => {
     sign: jest.fn(),
   };
 
+  // HU-17: repos de roles/permisos granulares añadidos al constructor de AuthService.
+  const mockRoleRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockPermissionRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockRolePermissionRepository = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,6 +63,18 @@ describe('AuthService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
+        },
+        {
+          provide: getRepositoryToken(RoleEntity),
+          useValue: mockRoleRepository,
+        },
+        {
+          provide: getRepositoryToken(PermissionEntity),
+          useValue: mockPermissionRepository,
+        },
+        {
+          provide: getRepositoryToken(RolePermission),
+          useValue: mockRolePermissionRepository,
         },
         {
           provide: JwtService,
@@ -47,6 +85,9 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
     jest.clearAllMocks();
+    // HU-17: aislamos la resolución de permisos; cada test de método no debe
+    // depender del contenido de ROLE_PERMISSIONS_MAP ni de la BD de roles.
+    jest.spyOn(service, 'getPermissionsForRole').mockResolvedValue([]);
   });
 
   it('debería estar definido', () => {
@@ -64,6 +105,7 @@ describe('AuthService', () => {
         email: 'admin@sgd.cl',
         password: 'hashed_pw',
         rol: 'admin',
+        contratistaId: null,
         activo: true,
       };
 
@@ -74,17 +116,27 @@ describe('AuthService', () => {
       const result = await service.login({ email: 'admin@sgd.cl', password: 'admin123' });
 
       expect(result.access_token).toBe('jwt_token_123');
+      // HU-17: el user ahora incluye permissions[]; HU-N3: contratistaId.
       expect(result.user).toEqual({
         id: 1,
         nombre: 'Admin SGD',
         email: 'admin@sgd.cl',
         rol: 'admin',
+        permissions: [],
+        contratistaId: null,
       });
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        sub: 1,
-        email: 'admin@sgd.cl',
-        rol: 'admin',
-      });
+      // HU-17/HU-10: el payload firmado lleva nombre, permissions, contratistaId y jti (uuid aleatorio).
+      expect(mockJwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sub: 1,
+          email: 'admin@sgd.cl',
+          nombre: 'Admin SGD',
+          rol: 'admin',
+          permissions: [],
+          contratistaId: null,
+          jti: expect.any(String),
+        }),
+      );
     });
 
     it('debería lanzar RpcException si el email no existe', async () => {
@@ -128,12 +180,14 @@ describe('AuthService', () => {
       const result = await service.getProfile(1);
 
       expect(result).not.toHaveProperty('password');
+      // HU-17: getProfile añade permissions[] resueltos para el rol.
       expect(result).toEqual({
         id: 1,
         nombre: 'Admin',
         email: 'admin@sgd.cl',
         rol: 'admin',
         activo: true,
+        permissions: [],
       });
     });
 
@@ -198,7 +252,7 @@ describe('AuthService', () => {
       nombre: 'Nuevo Usuario',
       email: 'nuevo@sgd.cl',
       password: 'password123',
-      rol: 'colaborador',
+      rol: Role.COLABORADOR,
     };
 
     it('debería crear un usuario exitosamente', async () => {
@@ -227,6 +281,92 @@ describe('AuthService', () => {
       mockUserRepository.findOne.mockResolvedValue({ id: 1, email: createDto.email });
 
       await expect(service.createUser(createDto)).rejects.toThrow(RpcException);
+    });
+  });
+
+  // ================================================================
+  // UPDATE USER
+  // ================================================================
+  describe('updateUser', () => {
+    const existingUser = {
+      id: 1,
+      nombre: 'Usuario Existente',
+      email: 'existente@sgd.cl',
+      password: 'hash',
+      rol: 'colaborador',
+      contratistaId: null,
+      activo: true,
+    };
+
+    it('debería actualizar el nombre exitosamente', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser });
+      mockUserRepository.save.mockResolvedValue({ ...existingUser, nombre: 'Nuevo Nombre' });
+
+      const result = await service.updateUser(1, { nombre: 'Nuevo Nombre' });
+
+      expect(result).not.toHaveProperty('password');
+      expect(mockUserRepository.save).toHaveBeenCalled();
+    });
+
+    it('debería actualizar el email si no está en uso', async () => {
+      mockUserRepository.findOne
+        .mockResolvedValueOnce({ ...existingUser })   // buscar usuario por id
+        .mockResolvedValueOnce(null);                  // verificar email duplicado
+      mockUserRepository.save.mockResolvedValue({ ...existingUser, email: 'nuevo@sgd.cl' });
+
+      const result = await service.updateUser(1, { email: 'nuevo@sgd.cl' });
+
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('debería lanzar 404 si el usuario no existe', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.updateUser(999, { nombre: 'Test' })).rejects.toThrow(RpcException);
+    });
+
+    it('debería lanzar 409 si el nuevo email ya está registrado', async () => {
+      mockUserRepository.findOne
+        .mockResolvedValueOnce({ ...existingUser })
+        .mockResolvedValueOnce({ id: 2, email: 'otro@sgd.cl' }); // email en uso por otro usuario
+
+      await expect(service.updateUser(1, { email: 'otro@sgd.cl' })).rejects.toThrow(RpcException);
+    });
+
+    it('debería lanzar 400 si el rol es inválido', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser });
+
+      await expect(service.updateUser(1, { rol: 'superadmin_invalido' as unknown as Role })).rejects.toThrow(RpcException);
+    });
+
+    it('debería hashear la nueva contraseña si se provee', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('nuevo_hash');
+      mockUserRepository.save.mockResolvedValue({ ...existingUser });
+
+      await service.updateUser(1, { password: 'nuevaPassword123' });
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('nuevaPassword123', 10);
+    });
+
+    it('debería lanzar 400 si se asigna rol contratista sin contratistaId', async () => {
+      mockUserRepository.findOne.mockResolvedValue({ ...existingUser, contratistaId: null });
+
+      await expect(
+        service.updateUser(1, { rol: Role.CONTRATISTA }),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('debería limpiar contratistaId al cambiar a un rol que no es contratista', async () => {
+      const contratistaUser = { ...existingUser, rol: 'contratista', contratistaId: 5 };
+      mockUserRepository.findOne.mockResolvedValue({ ...contratistaUser });
+      mockUserRepository.save.mockImplementation(async (u) => u);
+
+      const result = await service.updateUser(1, { rol: Role.COLABORADOR });
+
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ contratistaId: null }),
+      );
     });
   });
 

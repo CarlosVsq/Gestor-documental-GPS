@@ -14,6 +14,7 @@ export default function ContratistaForm({ onSubmit, initialData, isEditing, onCa
     rut: '',
     email: '',
     telefono: '',
+    permisosObjectFS: 'read_write',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,7 +39,7 @@ export default function ContratistaForm({ onSubmit, initialData, isEditing, onCa
     e.preventDefault();
     if (validate()) {
       onSubmit(formData);
-      if (!isEditing) setFormData({ nombre: '', rut: '', email: '', telefono: '' });
+      if (!isEditing) setFormData({ nombre: '', rut: '', email: '', telefono: '', permisosObjectFS: 'read_write' });
     }
   };
 
@@ -87,6 +88,16 @@ export default function ContratistaForm({ onSubmit, initialData, isEditing, onCa
         <div className="field-group">
           <label htmlFor="telefono">Teléfono <span className="optional">(opcional)</span></label>
           <input id="telefono" type="text" placeholder="Ej: +56912345678" value={formData.telefono || ''} onChange={(e) => handleChange('telefono', e.target.value)} />
+        </div>
+
+        <div className="field-group">
+          <label htmlFor="permisosObjectFS">Permisos Object FS <span className="optional">(opcional)</span></label>
+          <select id="permisosObjectFS" className="field-select" value={formData.permisosObjectFS || 'read_write'} onChange={(e) => handleChange('permisosObjectFS', e.target.value)}>
+            <option value="read">Lectura (Read)</option>
+            <option value="write">Escritura (Write)</option>
+            <option value="read_write">Lectura y Escritura (Read/Write)</option>
+            <option value="admin">Administrador (Admin)</option>
+          </select>
         </div>
       </div>
 

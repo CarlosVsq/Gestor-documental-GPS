@@ -1,11 +1,11 @@
 import {
   Controller, Get, Post, Put, Patch,
   Body, Param, Query, ParseIntPipe,
-  Inject, HttpException, UseGuards,
+  Inject, UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { callService } from '../common/rpc.utils';
 import { SERVICE_NAMES, CATEGORIAS_PATTERNS } from '../common/constants';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -22,11 +22,7 @@ export class CategoriasGatewayController {
   @ApiOperation({ summary: 'Crear una nueva categoría documental (HU-04)' })
   @ApiResponse({ status: 201, description: 'Categoría creada' })
   async create(@Body() createDto: any) {
-    try {
-      return await firstValueFrom(this.client.send(CATEGORIAS_PATTERNS.CREATE, createDto));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(CATEGORIAS_PATTERNS.CREATE, createDto));
   }
 
   @Get()
@@ -34,40 +30,25 @@ export class CategoriasGatewayController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
-    const p = Number(page) || 1;
-    const l = Number(limit) || 10;
-    try {
-      return await firstValueFrom(this.client.send(CATEGORIAS_PATTERNS.FIND_ALL, { page: p, limit: l }));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(CATEGORIAS_PATTERNS.FIND_ALL, { page: Number(page) || 1, limit: Number(limit) || 10 }));
   }
 
   @Get(':id')
+  @ApiParam({ name: 'id', type: Number })
   async findOne(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await firstValueFrom(this.client.send(CATEGORIAS_PATTERNS.FIND_ONE, id));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(CATEGORIAS_PATTERNS.FIND_ONE, id));
   }
 
   @Put(':id')
+  @ApiParam({ name: 'id', type: Number })
   async update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: any) {
-    try {
-      return await firstValueFrom(this.client.send(CATEGORIAS_PATTERNS.UPDATE, { id, updateDto }));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(CATEGORIAS_PATTERNS.UPDATE, { id, updateDto }));
   }
 
   @Patch(':id/toggle')
   @ApiOperation({ summary: 'Activar/desactivar categoría (no puede si tiene subtipos)' })
+  @ApiParam({ name: 'id', type: Number })
   async toggle(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await firstValueFrom(this.client.send(CATEGORIAS_PATTERNS.TOGGLE, id));
-    } catch (error) {
-      throw new HttpException(error.message, error.statusCode || 500);
-    }
+    return callService(this.client.send(CATEGORIAS_PATTERNS.TOGGLE, id));
   }
 }

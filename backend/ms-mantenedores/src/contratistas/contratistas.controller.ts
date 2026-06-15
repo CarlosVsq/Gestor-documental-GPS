@@ -31,8 +31,8 @@ export class ContratistasController {
   }
 
   @MessagePattern(CONTRATISTAS_PATTERNS.TOGGLE)
-  async toggle(@Payload() data: { id: number }) {
-    return this.contratistasService.toggle(data.id);
+  async toggle(@Payload() data: { id: number; actualizadoPor?: string }) {
+    return this.contratistasService.toggle(data.id, data.actualizadoPor);
   }
 
   @MessagePattern(CONTRATISTAS_PATTERNS.STATS)

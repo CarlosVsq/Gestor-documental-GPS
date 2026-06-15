@@ -16,6 +16,10 @@ export default function ProyectoForm({ onSubmit, initialData, isEditing, onCance
         fechaInicio: '',
         fechaFin: '',
         areaId: 0,
+        ubicacion: '',
+        presupuestoEstimado: 0,
+        horasHombre: 0,
+        estadoProyecto: 'En Licitación',
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -50,7 +54,7 @@ export default function ProyectoForm({ onSubmit, initialData, isEditing, onCance
         e.preventDefault();
         if (validate()) {
             onSubmit(formData);
-            if (!isEditing) setFormData({ nombre: '', fechaInicio: '', fechaFin: '', areaId: 0 });
+            if (!isEditing) setFormData({ nombre: '', fechaInicio: '', fechaFin: '', areaId: 0, ubicacion: '', presupuestoEstimado: 0, horasHombre: 0, estadoProyecto: 'En Licitación' });
         }
     };
 
@@ -107,6 +111,54 @@ export default function ProyectoForm({ onSubmit, initialData, isEditing, onCance
                         ))}
                     </select>
                     {errors.areaId && <span className="field-error">{errors.areaId}</span>}
+                </div>
+
+                <div className="field-group">
+                    <label htmlFor="proyecto-ubicacion">Ubicación <span className="optional">(opcional)</span></label>
+                    <input
+                        id="proyecto-ubicacion"
+                        type="text"
+                        placeholder="Ej: Faena Norte"
+                        value={formData.ubicacion || ''}
+                        onChange={(e) => handleChange('ubicacion', e.target.value)}
+                    />
+                </div>
+
+                <div className="field-group">
+                    <label htmlFor="proyecto-presupuesto">Presupuesto Estimado <span className="optional">(opcional)</span></label>
+                    <input
+                        id="proyecto-presupuesto"
+                        type="number"
+                        placeholder="Ej: 5000000"
+                        value={formData.presupuestoEstimado || ''}
+                        onChange={(e) => handleChange('presupuestoEstimado', Number(e.target.value))}
+                    />
+                </div>
+
+                <div className="field-group">
+                    <label htmlFor="proyecto-horas">Horas Hombre <span className="optional">(opcional)</span></label>
+                    <input
+                        id="proyecto-horas"
+                        type="number"
+                        placeholder="Ej: 120"
+                        value={formData.horasHombre || ''}
+                        onChange={(e) => handleChange('horasHombre', Number(e.target.value))}
+                    />
+                </div>
+
+                <div className="field-group">
+                    <label htmlFor="proyecto-estado">Estado del Proyecto <span className="required">*</span></label>
+                    <select
+                        id="proyecto-estado"
+                        className="field-select"
+                        value={formData.estadoProyecto || 'En Licitación'}
+                        onChange={(e) => handleChange('estadoProyecto', e.target.value)}
+                    >
+                        <option value="En Licitación">En Licitación</option>
+                        <option value="Ejecución">Ejecución</option>
+                        <option value="Finalizado">Finalizado</option>
+                        <option value="Suspendido">Suspendido</option>
+                    </select>
                 </div>
 
                 <div className={`field-group ${errors.fechaInicio ? 'has-error' : ''}`}>
