@@ -12,6 +12,19 @@ export function useIdleTimer() {
   const logoutTimerRef = useRef<any>(null);
   const countdownIntervalRef = useRef<any>(null);
 
+  // Ref para leer el estado del aviso dentro de los listeners SIN volverlo
+  // dependencia del efecto. Antes `showWarning` era dependencia del efecto de
+  // listeners: al aparecer el aviso, el cleanup limpiaba el contador y el timer
+  // de logout (congelando el contador y evitando el cierre de sesión).
+  const showWarningRef = useRef(false);
+  // Ref siempre apuntando al último `resetTimers`, para invocarlo desde el
+  // efecto de listeners sin que su identidad re-monte dicho efecto.
+  const resetTimersRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    showWarningRef.current = showWarning;
+  }, [showWarning]);
+
   // Cargar configuración de sesión desde backend
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -21,26 +34,28 @@ export function useIdleTimer() {
       .catch(err => console.error('Error al cargar configuración de sesión:', err));
   }, [isAuthenticated]);
 
-  const resetTimers = useCallback(() => {
+  const clearTimers = useCallback(() => {
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
     if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+  }, []);
 
+  const resetTimers = useCallback(() => {
+    clearTimers();
     setShowWarning(false);
 
     if (!config || !isAuthenticated) return;
 
     const { timeout_warning_ms, timeout_logout_ms } = config;
-    const warningTime = timeout_warning_ms;
-    const logoutTime = timeout_logout_ms;
 
     // Timer para mostrar la advertencia
     warningTimerRef.current = setTimeout(() => {
       setShowWarning(true);
-      const remainingSecs = Math.max(0, Math.floor((logoutTime - warningTime) / 1000));
+      const remainingSecs = Math.max(0, Math.round((timeout_logout_ms - timeout_warning_ms) / 1000));
       setRemainingTime(remainingSecs);
 
-      // Iniciar cuenta regresiva en segundos
+      // Cuenta regresiva en segundos. Este intervalo ahora sobrevive a la
+      // aparición del aviso (ver nota sobre showWarningRef).
       countdownIntervalRef.current = setInterval(() => {
         setRemainingTime(prev => {
           if (prev <= 1) {
@@ -50,41 +65,46 @@ export function useIdleTimer() {
           return prev - 1;
         });
       }, 1000);
-    }, warningTime);
+    }, timeout_warning_ms);
 
-    // Timer para realizar el logout automático
+    // Timer para el logout automático al agotarse la cuenta regresiva
     logoutTimerRef.current = setTimeout(() => {
+      clearTimers();
       logout();
       window.location.href = '/login?reason=inactivity';
-    }, logoutTime);
-  }, [config, isAuthenticated, logout]);
+    }, timeout_logout_ms);
+  }, [config, isAuthenticated, logout, clearTimers]);
 
-  // Escuchar eventos para resetear inactividad si no está en modo Warning
+  // Mantener la ref de resetTimers actualizada en cada cambio de identidad.
   useEffect(() => {
-    if (!isAuthenticated || !config || showWarning) return;
+    resetTimersRef.current = resetTimers;
+  }, [resetTimers]);
+
+  // Efecto de listeners de actividad. Depende solo de [isAuthenticated, config]
+  // (vía clearTimers estable), NO de showWarning, para no desmontarse cuando
+  // aparece el aviso.
+  useEffect(() => {
+    if (!isAuthenticated || !config) return;
 
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'visibilitychange'];
-    
+
     const handleActivity = () => {
-      resetTimers();
+      // Mientras se muestra el aviso, la actividad NO reinicia el contador:
+      // el usuario debe pulsar "Continuar Sesión" explícitamente.
+      if (showWarningRef.current) return;
+      resetTimersRef.current();
     };
 
-    events.forEach(event => {
-      window.addEventListener(event, handleActivity);
-    });
+    events.forEach(event => window.addEventListener(event, handleActivity));
 
-    // Inicializar timers al montar o cambiar configs
-    resetTimers();
+    // Inicializar timers al montar o al cargar la configuración.
+    resetTimersRef.current();
 
     return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, handleActivity);
-      });
-      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      events.forEach(event => window.removeEventListener(event, handleActivity));
+      clearTimers();
     };
-  }, [isAuthenticated, config, showWarning, resetTimers]);
+  }, [isAuthenticated, config, clearTimers]);
 
   return {
     showWarning,
