@@ -218,6 +218,11 @@ export class DocumentosService {
     return this.documentosRepository.findRecientes(limit, filtros);
   }
 
+  /** HU-21: distribución de documentos por categoría/subtipo. */
+  async getStats(filtros?: { contratistaId?: number; proyectoId?: number; desde?: string; hasta?: string }) {
+    return this.documentosRepository.getStats(filtros);
+  }
+
   async getTree() {
     return this.documentosRepository.getTree();
   }

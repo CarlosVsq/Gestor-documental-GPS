@@ -167,6 +167,54 @@ export class DocumentosRepository {
   }
 
   /**
+   * HU-21: Distribución de documentos por categoría y por subtipo.
+   * La categoría/subtipo se heredan del requerimiento padre (JOIN), igual que
+   * en `search()`. Usa `createQueryBuilder` con params `:named` (portable
+   * Postgres/SQLite). Filtros opcionales: contratista, proyecto y rango de fechas.
+   */
+  async getStats(filtros?: {
+    contratistaId?: number;
+    proyectoId?: number;
+    desde?: string;
+    hasta?: string;
+  }): Promise<{
+    byCategoria: Array<{ categoriaId: number; count: number }>;
+    bySubtipo: Array<{ subtipoId: number; count: number }>;
+    total: number;
+  }> {
+    const base = () => {
+      const qb = this.dataSource
+        .createQueryBuilder()
+        .from('documentos', 'd')
+        .innerJoin('requerimientos', 'r', 'r.id = d."requerimientoId"')
+        .where('d."eliminadoEn" IS NULL');
+      if (filtros?.contratistaId) qb.andWhere('r."contratistaId" = :cId', { cId: filtros.contratistaId });
+      if (filtros?.proyectoId) qb.andWhere('r."proyectoId" = :pId', { pId: filtros.proyectoId });
+      if (filtros?.desde) qb.andWhere('d."creadoEn" >= :desde', { desde: filtros.desde });
+      if (filtros?.hasta) qb.andWhere('d."creadoEn" <= :hasta', { hasta: filtros.hasta });
+      return qb;
+    };
+
+    const catRows = await base()
+      .select('r."categoriaId"', 'categoriaId')
+      .addSelect('COUNT(d.id)', 'count')
+      .groupBy('r."categoriaId"')
+      .getRawMany();
+
+    const subRows = await base()
+      .select('r."subtipoId"', 'subtipoId')
+      .addSelect('COUNT(d.id)', 'count')
+      .groupBy('r."subtipoId"')
+      .getRawMany();
+
+    const byCategoria = catRows.map((r) => ({ categoriaId: Number(r.categoriaId), count: Number(r.count) }));
+    const bySubtipo = subRows.map((r) => ({ subtipoId: Number(r.subtipoId), count: Number(r.count) }));
+    const total = byCategoria.reduce((acc, r) => acc + r.count, 0);
+
+    return { byCategoria, bySubtipo, total };
+  }
+
+  /**
    * Árbol jerárquico: contratistas → áreas → proyectos → requerimientos con conteo de docs
    */
   async getTree(): Promise<any[]> {

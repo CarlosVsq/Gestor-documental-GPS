@@ -346,4 +346,36 @@ describe('DocumentosRepository', () => {
       expect(mockQB.limit).toHaveBeenCalledWith(100);
     });
   });
+
+  describe('getStats (HU-21)', () => {
+    const buildStatsQB = (rows: any[]) => ({
+      from: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue(rows),
+    });
+
+    it('agrupa por categoría y subtipo, coacciona conteos a número y suma el total', async () => {
+      mockDataSource.createQueryBuilder
+        .mockReturnValueOnce(buildStatsQB([
+          { categoriaId: 1, count: '5' },
+          { categoriaId: 2, count: '3' },
+        ]))
+        .mockReturnValueOnce(buildStatsQB([{ subtipoId: 10, count: '4' }]));
+
+      const result = await repository.getStats({ contratistaId: 7 });
+
+      expect(result.byCategoria).toEqual([
+        { categoriaId: 1, count: 5 },
+        { categoriaId: 2, count: 3 },
+      ]);
+      expect(result.bySubtipo).toEqual([{ subtipoId: 10, count: 4 }]);
+      expect(result.total).toBe(8);
+      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(2);
+    });
+  });
 });
