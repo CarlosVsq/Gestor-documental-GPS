@@ -130,6 +130,43 @@ export class DocumentosRepository {
   }
 
   /**
+   * HU-33: Documentos más recientes para el panel de "Actividad Reciente".
+   * Une con requerimientos para mostrar el ticket de origen y, opcionalmente,
+   * filtra por contratista (confidencialidad HU-N3).
+   */
+  async findRecientes(
+    limit = 20,
+    filtros?: { contratistaId?: number },
+  ): Promise<any[]> {
+    const lim = Math.min(Math.max(limit, 1), 50);
+
+    const query = this.dataSource
+      .createQueryBuilder()
+      .select([
+        'd.id               AS id',
+        'd."nombreOriginal" AS "nombreOriginal"',
+        'd."mimeType"       AS "mimeType"',
+        'd."estadoDocumento" AS "estadoDocumento"',
+        'd."autorId"        AS "autorId"',
+        'd."creadoPor"      AS "creadoPor"',
+        'd."creadoEn"       AS "creadoEn"',
+        'd."requerimientoId" AS "requerimientoId"',
+        'r."codigoTicket"   AS "codigoTicket"',
+        'r."titulo"         AS "tituloRequerimiento"',
+        'r."contratistaId"  AS "contratistaId"',
+      ])
+      .from('documentos', 'd')
+      .innerJoin('requerimientos', 'r', 'r.id = d."requerimientoId"')
+      .where('d."eliminadoEn" IS NULL');
+
+    if (filtros?.contratistaId) {
+      query.andWhere('r."contratistaId" = :cId', { cId: filtros.contratistaId });
+    }
+
+    return query.orderBy('d."creadoEn"', 'DESC').limit(lim).getRawMany();
+  }
+
+  /**
    * Árbol jerárquico: contratistas → áreas → proyectos → requerimientos con conteo de docs
    */
   async getTree(): Promise<any[]> {

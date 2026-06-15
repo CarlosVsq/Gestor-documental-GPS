@@ -213,6 +213,11 @@ export class DocumentosService {
     return this.documentosRepository.search(filtros);
   }
 
+  /** HU-33: documentos más recientes (Actividad Reciente). */
+  async findRecientes(limit?: number, filtros?: { contratistaId?: number }) {
+    return this.documentosRepository.findRecientes(limit, filtros);
+  }
+
   async getTree() {
     return this.documentosRepository.getTree();
   }

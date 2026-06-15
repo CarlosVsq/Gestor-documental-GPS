@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ActivePage } from '../App';
 import type { ContratistaStats } from '../api/contratistas';
+import RecentActivity from './RecentActivity';
 
 interface DashboardProps {
   stats: ContratistaStats;
@@ -8,9 +9,10 @@ interface DashboardProps {
   areasTotal: number;
   proyectosTotal: number;
   onNavigate: (page: ActivePage) => void;
+  onOpenRequerimiento: (requerimientoId: number) => void;
 }
 
-export default function Dashboard({ stats, totalContratistas, areasTotal, proyectosTotal, onNavigate }: DashboardProps) {
+export default function Dashboard({ stats, totalContratistas, areasTotal, proyectosTotal, onNavigate, onOpenRequerimiento }: DashboardProps) {
   const [totalUsuarios, setTotalUsuarios] = useState(0);
 
   useEffect(() => {
@@ -123,6 +125,9 @@ export default function Dashboard({ stats, totalContratistas, areasTotal, proyec
             </button>
           </div>
         </div>
+
+        {/* HU-33: Actividad Reciente */}
+        <RecentActivity onOpenRequerimiento={onOpenRequerimiento} />
 
       </div>
     </div>

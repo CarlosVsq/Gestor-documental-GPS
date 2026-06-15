@@ -259,6 +259,25 @@ export class AlmacenamientoGatewayController {
     return callService(this.client.send(ALMACENAMIENTO_PATTERNS.GET_TREE, {}));
   }
 
+  // ─── Actividad Reciente (HU-33) ───────────────────────────────────────────
+  // NOTA: debe declararse ANTES de @Get(':id') para no ser capturado por el ParseIntPipe.
+
+  @Get('recientes')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.COLABORADOR, Role.AUDITOR, Role.CONTRATISTA)
+  @ApiOperation({ summary: 'HU-33: Documentos más recientes para el panel de Actividad Reciente' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async findRecientes(@Query('limit') limit: string, @Req() req: any) {
+    // Confidencialidad HU-N3: el contratista solo ve documentos de su propia empresa.
+    const contratistaId =
+      req.user?.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
+    return callService(
+      this.client.send(ALMACENAMIENTO_PATTERNS.FIND_RECIENTES, {
+        limit: limit ? parseInt(limit, 10) : 20,
+        contratistaId,
+      }),
+    );
+  }
+
   // ─── Generar PDF Inmutable (HU-29) ────────────────────────────────────────
 
   @Post('pdf/:requerimientoId')

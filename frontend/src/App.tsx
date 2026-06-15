@@ -179,6 +179,22 @@ function AppLayout() {
     }
   }, [handleNavigateToDocs, handleNavigate]);
 
+  // HU-33 (Fase 1): abre el expediente del requerimiento de un documento reciente.
+  // Reutiliza el flujo HU-N6 (getById + prefilledReq).
+  const handleOpenRequerimientoDocs = useCallback(async (requerimientoId: number) => {
+    try {
+      const req = await requerimientosApi.getById(requerimientoId);
+      if (req?.storagePath) {
+        handleNavigateToDocs(req);
+      } else {
+        handleNavigate('requerimientos');
+      }
+    } catch (err) {
+      console.error('No se pudo abrir el requerimiento:', err);
+      handleNavigate('requerimientos');
+    }
+  }, [handleNavigateToDocs, handleNavigate]);
+
   const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
@@ -351,7 +367,7 @@ function AppLayout() {
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':
-        return <Dashboard stats={stats} totalContratistas={total} areasTotal={areasTotal} proyectosTotal={proyectosTotal} onNavigate={handleNavigate} />;
+        return <Dashboard stats={stats} totalContratistas={total} areasTotal={areasTotal} proyectosTotal={proyectosTotal} onNavigate={handleNavigate} onOpenRequerimiento={handleOpenRequerimientoDocs} />;
 
       case 'contratistas':
         return (

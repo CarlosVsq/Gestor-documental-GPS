@@ -53,6 +53,21 @@ export interface UploadResult {
   errores: Array<{ nombreOriginal: string; motivo: string }>;
 }
 
+// HU-33: documento para el panel de Actividad Reciente
+export interface DocumentoReciente {
+  id: number;
+  nombreOriginal: string;
+  mimeType: string;
+  estadoDocumento: EstadoDocumento;
+  autorId: number;
+  creadoPor: string;
+  creadoEn: string;
+  requerimientoId: number;
+  codigoTicket?: string;
+  tituloRequerimiento?: string;
+  contratistaId?: number;
+}
+
 export interface SearchFiltros {
   q?: string;
   contratistaId?: number;
@@ -79,6 +94,17 @@ export interface TreeNode {
 }
 
 export const almacenamientoApi = {
+  /**
+   * HU-33: Documentos más recientes para el panel de Actividad Reciente.
+   */
+  async getRecientes(limit = 20): Promise<DocumentoReciente[]> {
+    const res = await fetch(`${API_BASE}/recientes?limit=${limit}`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener la actividad reciente');
+    return res.json();
+  },
+
   /**
    * HU-07: Subir un documento individual
    */

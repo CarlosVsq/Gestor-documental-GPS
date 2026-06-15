@@ -2252,3 +2252,60 @@ input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
   justify-content: center;
 }
 
+/* HU-33: Actividad Reciente */
+.recent-activity-empty {
+  padding: 16px;
+  color: var(--gray-400);
+  font-size: 0.85rem;
+}
+
+.recent-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recent-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--gray-100);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.recent-activity-item:hover {
+  background: var(--gray-50);
+}
+
+.recent-activity-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.recent-activity-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-activity-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-activity-meta {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+}
+
+.recent-activity-time {
+  font-size: 0.76rem;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+

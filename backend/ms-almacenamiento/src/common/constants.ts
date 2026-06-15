@@ -12,6 +12,7 @@ export const ALMACENAMIENTO_PATTERNS = {
   FIND_ALL: 'almacenamiento.findAll',
   FIND_ONE: 'almacenamiento.findOne',
   FIND_BY_REQUERIMIENTO: 'almacenamiento.findByRequerimiento',
+  FIND_RECIENTES: 'almacenamiento.findRecientes',
   SEARCH: 'almacenamiento.search',
   DELETE: 'almacenamiento.delete',
   UPDATE_ESTADO: 'almacenamiento.documento.updateEstado',

@@ -50,6 +50,14 @@ export class DocumentosController {
     return this.documentosService.search(filtros);
   }
 
+  /** HU-33: Documentos más recientes para el panel de Actividad Reciente */
+  @MessagePattern(ALMACENAMIENTO_PATTERNS.FIND_RECIENTES)
+  async findRecientes(@Payload() data: { limit?: number; contratistaId?: number }) {
+    return this.documentosService.findRecientes(data.limit, {
+      contratistaId: data.contratistaId,
+    });
+  }
+
   /** HU-32: Árbol jerárquico Contratista→Área→Proyecto→Requerimiento */
   @MessagePattern(ALMACENAMIENTO_PATTERNS.GET_TREE)
   async getTree() {
