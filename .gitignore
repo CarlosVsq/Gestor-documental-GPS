@@ -40,5 +40,8 @@ CLAUDE.md
 # Python cache
 __pycache__/
 
+# Graphify
+graphify-out/
+
 
 uploads/
