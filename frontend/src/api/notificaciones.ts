@@ -2,10 +2,16 @@ import { authHeaders, getToken } from './auth';
 
 export interface Notificacion {
   id: number;
-  usuarioId: number;
+  usuarioDestinoId: number;
   titulo: string;
   mensaje: string;
   tipo: 'DOCUMENT_UPLOADED' | 'STATE_CHANGED' | 'REQUIREMENT_CLOSED' | 'USER_ASSIGNED';
+  /** Entidad relacionada (ej: 'requerimientos') — para navegación al click. */
+  entidad?: string | null;
+  /** ID de la entidad relacionada. */
+  entidadId?: number | null;
+  /** Requerimiento asociado — destino de la navegación al click. */
+  requerimientoId?: number | null;
   leida: boolean;
   creadaEn: string;
 }

@@ -77,13 +77,9 @@ export class NotificacionesService {
     soloNoLeidas = false,
     limit = 50,
   ): Promise<Notificacion[]> {
-    const where: any[] = [
-      { usuarioDestinoId: usuarioId },
-      { usuarioDestinoId: 0 }
-    ];
+    const where: any = { usuarioDestinoId: usuarioId };
     if (soloNoLeidas) {
-      where[0].leida = false;
-      where[1].leida = false;
+      where.leida = false;
     }
 
     return this.repo.find({
@@ -98,10 +94,7 @@ export class NotificacionesService {
    */
   async contarNoLeidas(usuarioId: number): Promise<{ count: number }> {
     const count = await this.repo.count({
-      where: [
-        { usuarioDestinoId: usuarioId, leida: false },
-        { usuarioDestinoId: 0, leida: false }
-      ],
+      where: { usuarioDestinoId: usuarioId, leida: false },
     });
     return { count };
   }
@@ -111,10 +104,7 @@ export class NotificacionesService {
    */
   async marcarLeida(notificacionId: number, usuarioId: number): Promise<Notificacion> {
     const notif = await this.repo.findOne({
-      where: [
-        { id: notificacionId, usuarioDestinoId: usuarioId },
-        { id: notificacionId, usuarioDestinoId: 0 }
-      ],
+      where: { id: notificacionId, usuarioDestinoId: usuarioId },
     });
 
     if (!notif) {

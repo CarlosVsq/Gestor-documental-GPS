@@ -15,7 +15,7 @@ import CategoriasPage from './pages/CategoriasPage';
 import SubtiposPage from './pages/SubtiposPage';
 import RequerimientosPage from './pages/RequerimientosPage';
 import AlmacenamientoPage, { type PrefilledRequerimiento } from './pages/almacenamiento/AlmacenamientoPage';
-import type { Requerimiento } from './api/requerimientos';
+import { requerimientosApi, type Requerimiento } from './api/requerimientos';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
 import type { Contratista, CreateContratistaDto, ContratistaStats } from './api/contratistas';
@@ -159,6 +159,25 @@ function AppLayout() {
     setPrefilledReq({ id: req.id, codigoTicket: req.codigoTicket, storagePath: req.storagePath });
     handleNavigate('almacenamiento');
   }, [handleNavigate]);
+
+  // HU-34/HU-35 (Fix 3): al hacer click en una notificación, navegar a su recurso.
+  // Reutiliza el patrón HU-N6: si el requerimiento tiene expediente, abre su
+  // document set; si no, cae a la vista de Requerimientos.
+  const handleNotificationNavigate = useCallback(async (notif: Notificacion) => {
+    setShowNotificationPanel(false);
+    if (!notif.requerimientoId) return;
+    try {
+      const req = await requerimientosApi.getById(notif.requerimientoId);
+      if (req?.storagePath) {
+        handleNavigateToDocs(req);
+      } else {
+        handleNavigate('requerimientos');
+      }
+    } catch (err) {
+      console.error('No se pudo navegar desde la notificación:', err);
+      handleNavigate('requerimientos');
+    }
+  }, [handleNavigateToDocs, handleNavigate]);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -586,6 +605,7 @@ function AppLayout() {
         unreadCount={unreadCount}
         onMarkAsRead={handleMarkAsRead}
         onMarkAllAsRead={handleMarkAllAsRead}
+        onNavigate={handleNotificationNavigate}
       />
     </div>
   );

@@ -8,6 +8,8 @@ interface NotificationPanelProps {
   unreadCount: number;
   onMarkAsRead: (id: number) => void;
   onMarkAllAsRead: () => void;
+  /** Navega al recurso asociado a la notificación (HU-34/HU-35, Fix 3). */
+  onNavigate: (notif: Notificacion) => void;
 }
 
 export default function NotificationPanel({
@@ -17,6 +19,7 @@ export default function NotificationPanel({
   unreadCount,
   onMarkAsRead,
   onMarkAllAsRead,
+  onNavigate,
 }: NotificationPanelProps) {
   if (!isOpen) return null;
 
@@ -106,7 +109,10 @@ export default function NotificationPanel({
                 <div
                   key={notif.id}
                   className={`notification-item ${!notif.leida ? 'unread' : ''}`}
-                  onClick={() => !notif.leida && onMarkAsRead(notif.id)}
+                  onClick={() => {
+                    if (!notif.leida) onMarkAsRead(notif.id);
+                    onNavigate(notif);
+                  }}
                 >
                   <div className={`notification-item-icon ${notif.tipo.toLowerCase()}`}>
                     {getIcon(notif.tipo)}

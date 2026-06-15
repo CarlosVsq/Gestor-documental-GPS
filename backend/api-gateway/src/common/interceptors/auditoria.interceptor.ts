@@ -15,6 +15,7 @@ import {
   AUDITORIA_PATTERNS,
   SERVICE_NAMES,
 } from '../constants';
+import { NotificacionesDispatchService } from '../../notificaciones/notificaciones-dispatch.service';
 
 const METODOS_AUDITABLES = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 const CLAVES_SENSIBLES = ['password', 'contraseña', 'contrasena', 'token', 'access_token'];
@@ -27,6 +28,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
 
   constructor(
     @Inject(SERVICE_NAMES.AUDITORIA) private readonly client: ClientProxy,
+    private readonly notifDispatch: NotificacionesDispatchService,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
@@ -46,8 +48,36 @@ export class AuditoriaInterceptor implements NestInterceptor {
         } catch (e) {
           this.logger.warn(`No se pudo construir el evento de auditoria: ${e?.message}`);
         }
+        try {
+          this.dispatchNotificaciones(req, responseData);
+        } catch (e) {
+          this.logger.warn(`No se pudieron despachar notificaciones: ${e?.message}`);
+        }
       }),
     );
+  }
+
+  /**
+   * HU-34/HU-35: tras una mutación exitosa, decide si corresponde notificar y
+   * delega en NotificacionesDispatchService (fire-and-forget). El `tap` solo se
+   * dispara en respuestas exitosas, así que no notificamos sobre errores.
+   */
+  private dispatchNotificaciones(req: any, responseData: unknown) {
+    const ruta = (req.originalUrl || req.url || '').split('?')[0];
+
+    // HU-34: POST /api/almacenamiento/upload(-bulk)
+    if (req.method === 'POST' && /\/almacenamiento\/[^/]*upload/.test(ruta)) {
+      this.notifDispatch.onDocumentoSubido(req, responseData).catch(() => undefined);
+      return;
+    }
+
+    // HU-35: PATCH/PUT /api/requerimientos/:id/estado
+    if (
+      (req.method === 'PATCH' || req.method === 'PUT') &&
+      /\/requerimientos\/\d+\/estado\b/.test(ruta)
+    ) {
+      this.notifDispatch.onCambioEstado(req, responseData).catch(() => undefined);
+    }
   }
 
   private registrar(context: ExecutionContext, req: any, responseData: unknown) {

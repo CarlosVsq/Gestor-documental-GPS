@@ -117,6 +117,10 @@ export class RequerimientosService {
 
     async updateState(id: number, updateDto: UpdateEstadoDto): Promise<Requerimiento> {
         const req = await this.findOne(id);
+        // Estado de origen, capturado antes de mutar. Viaja como campo transitorio
+        // en la respuesta (no es columna, no se persiste) para que el gateway pueda
+        // armar el mensaje de notificación "ORIGEN → DESTINO" (HU-35, Fix 2).
+        const estadoAnterior = req.estado;
 
         if (req.estado === EstadoRequerimiento.CERRADO && updateDto.estado !== EstadoRequerimiento.CERRADO) {
             throw new RpcException({ statusCode: 400, message: 'Un requerimiento cerrado no puede volver a abrirse o ponerse en progreso.' });
@@ -184,6 +188,8 @@ export class RequerimientosService {
                 });
         }
 
+        // Adjunta el estado de origen para el dispatch de notificaciones (HU-35).
+        (saved as any).estadoAnterior = estadoAnterior;
         return saved;
     }
 

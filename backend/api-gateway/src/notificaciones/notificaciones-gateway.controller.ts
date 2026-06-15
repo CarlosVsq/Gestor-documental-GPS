@@ -10,6 +10,7 @@ import {
   Request,
   Sse,
   MessageEvent,
+  Header,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
@@ -40,6 +41,11 @@ export class NotificacionesGatewayController {
   ) {}
 
   @Sse('stream')
+  // Fix 4: desactiva el buffering de nginx SOLO para este stream. nginx respeta
+  // este header de respuesta y entrega los eventos SSE al instante, sin necesidad
+  // de tocar la configuración del proxy ni abrir puertos nuevos.
+  @Header('X-Accel-Buffering', 'no')
+  @Header('Cache-Control', 'no-cache, no-transform')
   @ApiOperation({ summary: 'Flujo de eventos SSE para recibir notificaciones en tiempo real' })
   streamNotifications(@Request() req: any): Observable<MessageEvent> {
     // Emitimos inmediatamente al conectar y luego cada 15 segundos
