@@ -50,11 +50,19 @@ export interface CreateRequerimientoDto {
   subtipoId: number;
 }
 
+export interface TendenciaPunto {
+  semana: string;
+  creados: number;
+  cerrados: number;
+}
+
 export interface RequerimientosStats {
   total: number;
   abiertos: number;
   enProgreso: number;
   cerrados: number;
+  estancados: number;
+  tendencia: TendenciaPunto[];
 }
 
 export const requerimientosApi = {
@@ -109,20 +117,13 @@ export const requerimientosApi = {
     return res.json();
   },
 
-  async getStats() {
-    const res = await fetch(`${API_BASE}?limit=1000`, {
+  // HU-23: KPIs calculados en el backend (antes se traían 1000 filas y se
+  // contaban en el cliente). Devuelve conteos por estado, estancados y tendencia.
+  async getStats(): Promise<RequerimientosStats> {
+    const res = await fetch(`${API_BASE}/stats`, {
       headers: authHeaders(),
     });
-    if (!res.ok) throw new Error('Error al obtener requerimientos para stats');
-
-    const responseData = await res.json();
-    const data: Requerimiento[] = responseData.data || [];
-
-    return {
-      total: data.length,
-      abiertos: data.filter(r => r.estado === EstadoRequerimiento.ABIERTO).length,
-      enProgreso: data.filter(r => r.estado === EstadoRequerimiento.EN_PROGRESO).length,
-      cerrados: data.filter(r => r.estado === EstadoRequerimiento.CERRADO).length,
-    };
+    if (!res.ok) throw new Error('Error al obtener estadísticas de requerimientos');
+    return res.json();
   }
 };

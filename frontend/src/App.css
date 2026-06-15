@@ -2252,6 +2252,73 @@ input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
   justify-content: center;
 }
 
+/* HU-23: KPIs de Requerimientos */
+.kpi-alert {
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  background: var(--orange-50, #fff7ed);
+  color: var(--orange-600, #c2410c);
+  border: 1px solid var(--orange-200, #fed7aa);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.req-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.req-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--gray-100);
+  background: var(--gray-50);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.req-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.req-kpi-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.req-kpi-label {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+}
+
+.req-kpi-abierto .req-kpi-value { color: #2563eb; }
+.req-kpi-progreso .req-kpi-value { color: var(--orange-500, #f97316); }
+.req-kpi-cerrado .req-kpi-value { color: #16a34a; }
+.req-kpi-estancado .req-kpi-value { color: #dc2626; }
+
+.req-trend-chart {
+  padding: 0 8px 12px;
+}
+
+.req-trend-title {
+  margin: 0 0 8px 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+@media (max-width: 640px) {
+  .req-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* HU-33: Actividad Reciente */
 .recent-activity-empty {
   padding: 16px;

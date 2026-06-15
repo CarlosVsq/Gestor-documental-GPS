@@ -73,6 +73,15 @@ export class RequerimientosGatewayController {
     }));
   }
 
+  @Get('stats')
+  @ApiOperation({ summary: 'HU-23: KPIs de estados de requerimientos (tiempo real)' })
+  @ApiResponse({ status: 200, description: 'Conteos por estado, estancados y tendencia semanal' })
+  async getStats(@Request() req: any) {
+    // El contratista solo ve sus propios KPIs (HU-N3).
+    const contratistaId = req.user.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
+    return callService(this.client.send(REQUERIMIENTOS_PATTERNS.STATS, { contratistaId }));
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un requerimiento por ID' })
   @ApiResponse({ status: 200, description: 'Requerimiento encontrado' })
