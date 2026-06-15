@@ -146,9 +146,32 @@ Reglas finales para asegurar que el proceso documental se cumpla estrictamente.
 
 
 
-## Estado de Implementación — Snapshot 2026-06-14
+## Estado de Implementación — Snapshot 2026-06-15
 
 Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o más criterios de aceptación) · ❌ No implementada / Pendiente · ⚪ Fuera de alcance (decisión consciente, no se implementará — ver sección "Fuera de alcance — Justificación")
+
+### Resumen de avances recientes (2026-06-15)
+
+Trabajo realizado en la rama `Testing` desde el snapshot anterior. Cada cambio se verificó con build + tests + prueba en vivo sobre el stack local (puerto 8040).
+
+**Notificaciones in-app (HU-34 / HU-35) — de ⚪ "fuera de alcance" a ✅.** Se implementó el sistema (tabla `notificaciones` en `ms-auditoria`, SSE en el gateway, campana + panel en el front) y se corrigieron 6 bugs en 4 fixes:
+1. Destinatarios reales por rol/asignación en vez de *broadcast* `usuarioDestinoId=0` (arregla "marcar todas como leídas", el estado de lectura compartido y la fuga de visibilidad a roles ajenos — respeta HU-N3).
+2. HU-35 muestra "estado origen → destino" (campo transitorio `estadoAnterior`).
+3. El click en la notificación navega al requerimiento (reusa flujo HU-N6).
+4. El SSE deja de bufferearse tras nginx (`X-Accel-Buffering: no` + `location` dedicado, sin puertos nuevos).
+Verificado en vivo: subida → notifica solo a supervisores/admin (no al autor ni al auditor); cambio de estado → notifica al creador/asignado; "marcar todas" funciona; lectura por-usuario; SSE inmediato.
+
+**HU-33 — Actividad Reciente (✅).** Panel en el Dashboard con los últimos 20 documentos (`GET /api/almacenamiento/recientes`), polling cada 30 s, click abre el expediente. Feed global salvo el contratista (solo lo suyo). Ver "Detalle de control de acceso — HU-33".
+
+**HU-23 — KPIs en tiempo real (de 🟡 a ✅).** Conteos server-side (`ms-requerimientos.getStats`, `GET /api/requerimientos/stats`): Abiertos/En Progreso/Cerrados/**Estancados** (>7 días sin cerrar) + **gráfico de tendencia** semanal (recharts) en el Dashboard. Se eliminó el conteo client-side de 1000 filas.
+
+**HU-21 — Distribución por categoría/subtipo (de ❌ a ✅).** Nueva página **Reportes** (antes placeholder) con gráfico de barras por categoría y **drill-down a subtipo** + filtros de proyecto y fecha (`ms-almacenamiento.getStats`, `GET /api/almacenamiento/stats`).
+
+**HU-27 — Auto-logout por inactividad (bug arreglado; sigue ⚪ en el snapshot).** El contador del aviso de inactividad no descontaba ni cerraba sesión: el `useEffect` de listeners tenía `showWarning` como dependencia y al aparecer el aviso su cleanup mataba el contador y el timer de logout. Corregido en `useIdleTimer.ts`. Queda pendiente decidir si se reclasifica a ✅.
+
+**Pendientes del plan de cierre:** HU-22 (volumen por usuario/contratista), HU-24 (export a Excel) y HU-15 (bandeja de tareas).
+
+> Las HUs marcadas como "adaptadas" originalmente especifican SharePoint o Power BI; el sistema implementado usa **SeaweedFS + PostgreSQL**, por lo que la integración se reemplazó por la pila local equivalente.
 
 > Las HUs marcadas como "adaptadas" originalmente especifican SharePoint o Power BI; el sistema implementado usa **SeaweedFS + PostgreSQL**, por lo que la integración se reemplazó por la pila local equivalente.
 
@@ -191,7 +214,7 @@ Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o m�
 | HU | Estado | Evidencia / Nota |
 |----|--------|------------------|
 | HU-20 | ⚪ | **Fuera de alcance** — la HU exige conexión nativa SharePoint Lists → Power BI, imposible con el stack actual (SeaweedFS + PostgreSQL). Reemplazada por HU-21/22/23/24 (dashboards internos con recharts + exportación a Excel). Ver justificación. |
-| HU-21 | ❌ | Sin gráficos. `Dashboard.tsx` solo tiene KPIs numéricos, no se importa ninguna librería de charts. |
+| HU-21 | ✅ | Distribución de documentos por **categoría** con **drill-down a subtipo** en la nueva página **Reportes** (`ReportesPage.tsx`, recharts). Backend: `ms-almacenamiento.getStats` (pattern `almacenamiento.stats`, GROUP BY portable, categoría/subtipo heredados del requerimiento) → `GET /api/almacenamiento/stats` con filtros de proyecto y rango de fechas (y scoping por contratista). Implementada 2026-06-15. |
 | HU-22 | ❌ | No hay endpoints ni vistas que agrupen requerimientos por usuario o contratista para reporting. |
 | HU-23 | ✅ | KPIs server-side en `ms-requerimientos.getStats` (pattern `requerimientos.stats`, solo `repo.count()`), expuestos en `GET /api/requerimientos/stats` (filtrado por contratista). En el **Dashboard**: tarjetas Abiertos/En Progreso/Cerrados/**Estancados**, **alerta** si hay estancados (>7 días sin cerrar) y **gráfico de tendencia** semanal (creados vs cerrados, recharts) en `RequerimientosKpis.tsx`, refresco cada 30 s. Se eliminó el conteo client-side de 1000 filas. Implementada 2026-06-15. |
 | HU-24 | ❌ | Sin exportación a Excel (no hay `xlsx` ni endpoint `/export`). |
@@ -299,9 +322,9 @@ Estado del plan: **Fixes 1-4 aplicados y VERIFICADOS EN VIVO (2026-06-14)** sobr
 ### Resumen ejecutivo
 
 - **Total HUs:** 43.
-- **Implementadas (✅):** 37 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-14, HU-16, HU-17 (adaptada), HU-18, HU-19, HU-23, HU-25, HU-26, HU-28, HU-29, HU-30 (alcance reducido), HU-31, HU-32, HU-33, HU-34, HU-35, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7, HU-N8.
+- **Implementadas (✅):** 38 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-14, HU-16, HU-17 (adaptada), HU-18, HU-19, HU-21, HU-23, HU-25, HU-26, HU-28, HU-29, HU-30 (alcance reducido), HU-31, HU-32, HU-33, HU-34, HU-35, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7, HU-N8.
 - **Parciales (🟡):** 0.
-- **No implementadas (❌):** 4 — HU-15, HU-21, HU-22, HU-24.
+- **No implementadas (❌):** 3 — HU-15, HU-22, HU-24.
 - **Fuera de alcance (⚪):** 2 — HU-20, HU-27.
 
 **Cobertura gestionada: 43/43 (100%)** — cada HU tiene un estado definido (implementada, parcial con bugs documentados, o fuera de alcance documentada).

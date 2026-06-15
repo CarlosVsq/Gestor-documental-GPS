@@ -58,6 +58,14 @@ export class DocumentosController {
     });
   }
 
+  /** HU-21: Distribución de documentos por categoría/subtipo */
+  @MessagePattern(ALMACENAMIENTO_PATTERNS.STATS)
+  async getStats(
+    @Payload() data: { contratistaId?: number; proyectoId?: number; desde?: string; hasta?: string },
+  ) {
+    return this.documentosService.getStats(data);
+  }
+
   /** HU-32: Árbol jerárquico Contratista→Área→Proyecto→Requerimiento */
   @MessagePattern(ALMACENAMIENTO_PATTERNS.GET_TREE)
   async getTree() {

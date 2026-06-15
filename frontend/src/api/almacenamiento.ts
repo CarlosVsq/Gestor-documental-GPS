@@ -93,6 +93,12 @@ export interface TreeNode {
   totalDocumentos: number;
 }
 
+export interface AlmacenamientoStats {
+  byCategoria: Array<{ categoriaId: number; count: number }>;
+  bySubtipo: Array<{ subtipoId: number; count: number }>;
+  total: number;
+}
+
 export const almacenamientoApi = {
   /**
    * HU-33: Documentos más recientes para el panel de Actividad Reciente.
@@ -102,6 +108,19 @@ export const almacenamientoApi = {
       headers: authHeaders(),
     });
     if (!res.ok) throw new Error('Error al obtener la actividad reciente');
+    return res.json();
+  },
+
+  /**
+   * HU-21: Distribución de documentos por categoría/subtipo (página Reportes).
+   */
+  async getStats(filtros?: { proyectoId?: number; desde?: string; hasta?: string }): Promise<AlmacenamientoStats> {
+    const params = new URLSearchParams();
+    if (filtros?.proyectoId) params.append('proyectoId', String(filtros.proyectoId));
+    if (filtros?.desde) params.append('desde', filtros.desde);
+    if (filtros?.hasta) params.append('hasta', filtros.hasta);
+    const res = await fetch(`${API_BASE}/stats?${params}`, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Error al obtener estadísticas de documentos');
     return res.json();
   },
 

@@ -250,6 +250,27 @@ export class AlmacenamientoGatewayController {
     return callService(this.client.send(ALMACENAMIENTO_PATTERNS.SEARCH, filtros));
   }
 
+  // ─── Distribución por categoría/subtipo (HU-21) ───────────────────────────
+  // Antes de @Get(':id') para no chocar con el ParseIntPipe.
+
+  @Get('stats')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.GERENTE, Role.COLABORADOR, Role.AUDITOR, Role.CONTRATISTA)
+  @ApiOperation({ summary: 'HU-21: Distribución de documentos por categoría y subtipo' })
+  @ApiQuery({ name: 'proyectoId', required: false, type: Number })
+  @ApiQuery({ name: 'desde', required: false, description: 'Fecha ISO desde (inclusive)' })
+  @ApiQuery({ name: 'hasta', required: false, description: 'Fecha ISO hasta (inclusive)' })
+  async getStats(@Query() query: any, @Req() req: any) {
+    const contratistaId = req.user?.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
+    return callService(
+      this.client.send(ALMACENAMIENTO_PATTERNS.STATS, {
+        contratistaId,
+        proyectoId: query.proyectoId ? parseInt(query.proyectoId, 10) : undefined,
+        desde: query.desde || undefined,
+        hasta: query.hasta || undefined,
+      }),
+    );
+  }
+
   // ─── Árbol Jerárquico (HU-32) ─────────────────────────────────────────────
 
   @Get('tree')

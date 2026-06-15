@@ -15,6 +15,7 @@ import CategoriasPage from './pages/CategoriasPage';
 import SubtiposPage from './pages/SubtiposPage';
 import RequerimientosPage from './pages/RequerimientosPage';
 import AlmacenamientoPage, { type PrefilledRequerimiento } from './pages/almacenamiento/AlmacenamientoPage';
+import ReportesPage from './pages/ReportesPage';
 import { requerimientosApi, type Requerimiento } from './api/requerimientos';
 import { useAuth } from './context/AuthContext';
 import { contratistasApi } from './api/contratistas';
@@ -56,6 +57,7 @@ const getPageHeaderInfo = (page: ActivePage) => {
     case 'subtipos': return { title: 'Subtipos', desc: 'Gestiona los subtipos documentales por categoría' };
     case 'usuarios': return { title: 'Administración de Usuarios', desc: 'Gestión de accesos y roles del Sistema de Gestión Documental' };
     case 'almacenamiento': return { title: 'Gestión de Documentos', desc: 'Expedientes digitales, carga de archivos y firma digital' };
+    case 'reportes': return { title: 'Reportes', desc: 'Analítica de documentos y requerimientos' };
     default: return { title: page.charAt(0).toUpperCase() + page.slice(1), desc: 'Esta sección estará disponible próximamente' };
   }
 };
@@ -503,6 +505,13 @@ function AppLayout() {
               prefilledRequerimiento={prefilledReq}
               onPrefillConsumed={() => setPrefilledReq(null)}
             />
+          </ProtectedRoute>
+        );
+
+      case 'reportes':
+        return (
+          <ProtectedRoute requiredPermissions={[Permission.VIEW_REPORTS]}>
+            <ReportesPage />
           </ProtectedRoute>
         );
 

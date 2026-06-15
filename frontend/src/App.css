@@ -2252,6 +2252,39 @@ input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
   justify-content: center;
 }
 
+/* HU-21: Página de Reportes */
+.reportes-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.reportes-filtros label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.reportes-filtros select,
+.reportes-filtros input {
+  padding: 7px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  min-width: 150px;
+}
+
+.reportes-total {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--gray-600);
+}
+
 /* HU-23: KPIs de Requerimientos */
 .kpi-alert {
   margin: 0 16px 12px;
