@@ -193,7 +193,7 @@ Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o m�
 | HU-20 | ⚪ | **Fuera de alcance** — la HU exige conexión nativa SharePoint Lists → Power BI, imposible con el stack actual (SeaweedFS + PostgreSQL). Reemplazada por HU-21/22/23/24 (dashboards internos con recharts + exportación a Excel). Ver justificación. |
 | HU-21 | ❌ | Sin gráficos. `Dashboard.tsx` solo tiene KPIs numéricos, no se importa ninguna librería de charts. |
 | HU-22 | ❌ | No hay endpoints ni vistas que agrupen requerimientos por usuario o contratista para reporting. |
-| HU-23 | 🟡 | KPIs Abiertos/En Progreso/Cerrados existen pero **dentro** de `RequerimientosPage` (`api/requerimientos.ts:112-127`, calculados client-side trayendo hasta 1000 filas). Faltan en Dashboard, sin tendencia temporal, sin alerta de "estancados >7 días". |
+| HU-23 | ✅ | KPIs server-side en `ms-requerimientos.getStats` (pattern `requerimientos.stats`, solo `repo.count()`), expuestos en `GET /api/requerimientos/stats` (filtrado por contratista). En el **Dashboard**: tarjetas Abiertos/En Progreso/Cerrados/**Estancados**, **alerta** si hay estancados (>7 días sin cerrar) y **gráfico de tendencia** semanal (creados vs cerrados, recharts) en `RequerimientosKpis.tsx`, refresco cada 30 s. Se eliminó el conteo client-side de 1000 filas. Implementada 2026-06-15. |
 | HU-24 | ❌ | Sin exportación a Excel (no hay `xlsx` ni endpoint `/export`). |
 
 ### Épica 5 — Autenticación y Seguridad
@@ -299,8 +299,8 @@ Estado del plan: **Fixes 1-4 aplicados y VERIFICADOS EN VIVO (2026-06-14)** sobr
 ### Resumen ejecutivo
 
 - **Total HUs:** 43.
-- **Implementadas (✅):** 36 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-14, HU-16, HU-17 (adaptada), HU-18, HU-19, HU-25, HU-26, HU-28, HU-29, HU-30 (alcance reducido), HU-31, HU-32, HU-33, HU-34, HU-35, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7, HU-N8.
-- **Parciales (🟡):** 1 — HU-23.
+- **Implementadas (✅):** 37 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-14, HU-16, HU-17 (adaptada), HU-18, HU-19, HU-23, HU-25, HU-26, HU-28, HU-29, HU-30 (alcance reducido), HU-31, HU-32, HU-33, HU-34, HU-35, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7, HU-N8.
+- **Parciales (🟡):** 0.
 - **No implementadas (❌):** 4 — HU-15, HU-21, HU-22, HU-24.
 - **Fuera de alcance (⚪):** 2 — HU-20, HU-27.
 

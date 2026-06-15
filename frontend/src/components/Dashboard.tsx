@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { ActivePage } from '../App';
 import type { ContratistaStats } from '../api/contratistas';
 import RecentActivity from './RecentActivity';
+import RequerimientosKpis from './RequerimientosKpis';
 
 interface DashboardProps {
   stats: ContratistaStats;
@@ -72,6 +73,9 @@ export default function Dashboard({ stats, totalContratistas, areasTotal, proyec
           </div>
         </div>
       </div>
+
+      {/* HU-23: KPIs de requerimientos en tiempo real */}
+      <RequerimientosKpis onNavigate={onNavigate} />
 
       {/* Quick Actions + Recent Activity */}
       <div className="dashboard-grid">

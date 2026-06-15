@@ -18,6 +18,7 @@ describe('RequerimientosService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     findAndCount: jest.fn(),
+    count: jest.fn(),
   };
 
   const mockAlmacenamientoClient = {
@@ -235,6 +236,41 @@ describe('RequerimientosService', () => {
         service.updateState(1, { estado: EstadoRequerimiento.EN_PROGRESO }),
       ).rejects.toThrow(RpcException);
       expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── HU-23: getStats ──────────────────────────────────────
+  describe('getStats', () => {
+    it('devuelve conteos por estado, estancados y 8 puntos de tendencia', async () => {
+      // 5 counts base (total, abiertos, enProgreso, cerrados, estancados) +
+      // 16 counts de tendencia (8 semanas x 2). mockResolvedValue cubre todos.
+      mockRepository.count.mockResolvedValue(3);
+
+      const stats = await service.getStats();
+
+      expect(stats).toMatchObject({
+        total: 3,
+        abiertos: 3,
+        enProgreso: 3,
+        cerrados: 3,
+        estancados: 3,
+      });
+      expect(stats.tendencia).toHaveLength(8);
+      expect(stats.tendencia[0]).toHaveProperty('semana');
+      expect(stats.tendencia[0]).toHaveProperty('creados');
+      expect(stats.tendencia[0]).toHaveProperty('cerrados');
+      // 5 conteos base + 16 de tendencia
+      expect(mockRepository.count).toHaveBeenCalledTimes(21);
+    });
+
+    it('propaga el filtro de contratista a los conteos', async () => {
+      mockRepository.count.mockResolvedValue(0);
+      await service.getStats({ contratistaId: 7 });
+      expect(mockRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ contratistaId: 7 }),
+        }),
+      );
     });
   });
 });

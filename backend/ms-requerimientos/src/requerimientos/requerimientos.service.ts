@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { RpcException, ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, Not, LessThan, Between } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { Requerimiento, EstadoRequerimiento, PrioridadRequerimiento } from './requerimiento.entity';
@@ -105,6 +105,65 @@ export class RequerimientosService {
             order: { creadoEn: 'DESC' },
         });
         return { data, total };
+    }
+
+    /**
+     * HU-23: KPIs de estados en tiempo real para el dashboard.
+     * - Conteos por estado + total.
+     * - `estancados`: requerimientos no cerrados con más de 7 días de antigüedad.
+     * - `tendencia`: creados vs cerrados por semana en las últimas 8 semanas.
+     *
+     * Usa solo `repo.count()` (portable Postgres/SQLite, sin SQL crudo).
+     * Filtra por contratista cuando se recibe `contratistaId` (HU-N3).
+     */
+    async getStats(filtros?: { contratistaId?: number }): Promise<{
+        total: number;
+        abiertos: number;
+        enProgreso: number;
+        cerrados: number;
+        estancados: number;
+        tendencia: Array<{ semana: string; creados: number; cerrados: number }>;
+    }> {
+        const base: any = {};
+        if (filtros?.contratistaId) base.contratistaId = filtros.contratistaId;
+
+        const DAY = 24 * 60 * 60 * 1000;
+        const ahora = new Date();
+        const hace7dias = new Date(ahora.getTime() - 7 * DAY);
+
+        const [total, abiertos, enProgreso, cerrados, estancados] = await Promise.all([
+            this.requerimientoRepository.count({ where: base }),
+            this.requerimientoRepository.count({ where: { ...base, estado: EstadoRequerimiento.ABIERTO } }),
+            this.requerimientoRepository.count({ where: { ...base, estado: EstadoRequerimiento.EN_PROGRESO } }),
+            this.requerimientoRepository.count({ where: { ...base, estado: EstadoRequerimiento.CERRADO } }),
+            this.requerimientoRepository.count({
+                where: { ...base, estado: Not(EstadoRequerimiento.CERRADO), creadoEn: LessThan(hace7dias) },
+            }),
+        ]);
+
+        // Tendencia: 8 semanas, ventanas medio-abiertas [inicio, fin) para no solapar.
+        const SEMANAS = 8;
+        const ventanas: Array<{ inicio: Date; finExcl: Date; label: string }> = [];
+        for (let i = SEMANAS - 1; i >= 0; i--) {
+            const fin = new Date(ahora.getTime() - i * 7 * DAY);
+            const inicio = new Date(fin.getTime() - 7 * DAY);
+            ventanas.push({
+                inicio,
+                finExcl: new Date(fin.getTime() - 1),
+                label: `${inicio.getDate()}/${inicio.getMonth() + 1}`,
+            });
+        }
+        const tendencia = await Promise.all(
+            ventanas.map(async (v) => {
+                const [creados, cerr] = await Promise.all([
+                    this.requerimientoRepository.count({ where: { ...base, creadoEn: Between(v.inicio, v.finExcl) } }),
+                    this.requerimientoRepository.count({ where: { ...base, fechaCierre: Between(v.inicio, v.finExcl) } }),
+                ]);
+                return { semana: v.label, creados, cerrados: cerr };
+            }),
+        );
+
+        return { total, abiertos, enProgreso, cerrados, estancados, tendencia };
     }
 
     async findOne(id: number): Promise<Requerimiento> {
