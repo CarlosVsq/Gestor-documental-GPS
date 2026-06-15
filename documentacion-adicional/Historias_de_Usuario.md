@@ -146,6 +146,205 @@ Reglas finales para asegurar que el proceso documental se cumpla estrictamente.
 
 
 
+## Estado de Implementación — Snapshot 2026-06-15
+
+Leyenda: ✅ Implementada · 🟡 Parcial (funcional pero falta cumplir uno o más criterios de aceptación) · ❌ No implementada / Pendiente · ⚪ Fuera de alcance (decisión consciente, no se implementará — ver sección "Fuera de alcance — Justificación")
+
+### Resumen de avances recientes (2026-06-15)
+
+Trabajo realizado en la rama `Testing` desde el snapshot anterior. Cada cambio se verificó con build + tests + prueba en vivo sobre el stack local (puerto 8040).
+
+**Notificaciones in-app (HU-34 / HU-35) — de ⚪ "fuera de alcance" a ✅.** Se implementó el sistema (tabla `notificaciones` en `ms-auditoria`, SSE en el gateway, campana + panel en el front) y se corrigieron 6 bugs en 4 fixes:
+1. Destinatarios reales por rol/asignación en vez de *broadcast* `usuarioDestinoId=0` (arregla "marcar todas como leídas", el estado de lectura compartido y la fuga de visibilidad a roles ajenos — respeta HU-N3).
+2. HU-35 muestra "estado origen → destino" (campo transitorio `estadoAnterior`).
+3. El click en la notificación navega al requerimiento (reusa flujo HU-N6).
+4. El SSE deja de bufferearse tras nginx (`X-Accel-Buffering: no` + `location` dedicado, sin puertos nuevos).
+Verificado en vivo: subida → notifica solo a supervisores/admin (no al autor ni al auditor); cambio de estado → notifica al creador/asignado; "marcar todas" funciona; lectura por-usuario; SSE inmediato.
+
+**HU-33 — Actividad Reciente (✅).** Panel en el Dashboard con los últimos 20 documentos (`GET /api/almacenamiento/recientes`), polling cada 30 s, click abre el expediente. Feed global salvo el contratista (solo lo suyo). Ver "Detalle de control de acceso — HU-33".
+
+**HU-23 — KPIs en tiempo real (de 🟡 a ✅).** Conteos server-side (`ms-requerimientos.getStats`, `GET /api/requerimientos/stats`): Abiertos/En Progreso/Cerrados/**Estancados** (>7 días sin cerrar) + **gráfico de tendencia** semanal (recharts) en el Dashboard. Se eliminó el conteo client-side de 1000 filas.
+
+**HU-21 — Distribución por categoría/subtipo (de ❌ a ✅).** Nueva página **Reportes** (antes placeholder) con gráfico de barras por categoría y **drill-down a subtipo** + filtros de proyecto y fecha (`ms-almacenamiento.getStats`, `GET /api/almacenamiento/stats`).
+
+**HU-27 — Auto-logout por inactividad (bug arreglado; sigue ⚪ en el snapshot).** El contador del aviso de inactividad no descontaba ni cerraba sesión: el `useEffect` de listeners tenía `showWarning` como dependencia y al aparecer el aviso su cleanup mataba el contador y el timer de logout. Corregido en `useIdleTimer.ts`. Queda pendiente decidir si se reclasifica a ✅.
+
+**Pendientes del plan de cierre:** HU-22 (volumen por usuario/contratista), HU-24 (export a Excel) y HU-15 (bandeja de tareas).
+
+> Las HUs marcadas como "adaptadas" originalmente especifican SharePoint o Power BI; el sistema implementado usa **SeaweedFS + PostgreSQL**, por lo que la integración se reemplazó por la pila local equivalente.
+
+> Las HUs marcadas como "adaptadas" originalmente especifican SharePoint o Power BI; el sistema implementado usa **SeaweedFS + PostgreSQL**, por lo que la integración se reemplazó por la pila local equivalente.
+
+### Épica 1 — Mantenedores
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-01 | ✅ | `backend/ms-mantenedores/src/contratistas/` + `frontend/src/pages/...` — CRUD con RUT único y soft delete. |
+| HU-02 | ✅ | `ms-mantenedores/src/areas/` — vinculación a contratista validada. |
+| HU-03 | ✅ | `ms-mantenedores/src/proyectos/proyectos.service.ts` — código autogenerado, validación área. |
+| HU-04 | ✅ | `ms-mantenedores/src/categorias/`. |
+| HU-05 | ✅ | `ms-mantenedores/src/subtipos/` — unicidad por categoría. |
+| HU-06 | ✅ | Validaciones cruzadas en services + DTO de cada mantenedor. |
+
+### Épica 2 — Gestión Documental y Captura
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-07 | ✅ | `ms-almacenamiento/src/documentos/documentos.service.ts` + `UploadModal.tsx`. |
+| HU-08 | ✅ | `UploadModal.tsx:172` input `multiple`; sube varios archivos en un diálogo. |
+| HU-09 | ✅ | `AlmacenamientoPage.tsx` — lista por requerimiento + descarga; preview de PDF/imagen. |
+| HU-10 | ✅ | `api-gateway/src/auth/guards/jwt-auth.guard.ts` + `roles.guard.ts`. |
+| HU-11 | ✅ | `useFirmaPersistida`, `ConfigurarFirmaModal`, `FirmarDocumentoModal`, `pdf.service.ts:firmarDocumento`. La firma se **persiste**: el PDF firmado reemplaza al original en SeaweedFS y se guardan `firmadoEn`/`firmadoPorId` en `documento.entity.ts` (registro de quién firmó y cuándo). |
+| HU-12 | ✅ (adaptada) | "Document Set" = expediente SeaweedFS por requerimiento (`storagePath` + `almacenamiento.expediente.create`). |
+| HU-13 | ✅ | `documento.entity.ts` — categoriaId, subtipoId, autor, fecha, mimeType. |
+
+### Épica 3 — Workflow y Trazabilidad
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-14 | ✅ | Transiciones validadas en `requerimientos.service.ts:116-134`. El criterio "notificación al cambiar de estado" **ahora sí se cubre** vía HU-35 (notificación in-app al cambiar el estado del requerimiento). Ver Épica 8. |
+| HU-15 | ❌ | `RequerimientosPage` muestra tabla con filtros estado/prioridad pero no es una bandeja kanban; no hay categoría "bloqueados" ni indicador visual de antigüedad. |
+| HU-16 | ✅ | `ms-auditoria` (TCP :3005) con tabla `auditoria` **inmutable** (append-only, columnas `update:false`, sin update/delete handler). Registra quién/acción/timestamp por cada operación con `CREATE/UPDATE/DELETE/SIGN/STATE_CHANGE`. Lectura para auditor/admin vía `GET /api/auditoria`, `/auditoria/requerimiento/:id`, `/auditoria/:entidad/:id`. **Matiz:** el diff "datos anteriores" no se captura en el interceptor HTTP (solo `datosDespues`); la columna `datosAntes` existe y se alimentará con llamadas explícitas por microservicio cuando se requiera el diff completo. |
+| HU-17 | ✅ (adaptada) | Control de acceso por **permisos granulares de acción** (no por carpeta/documento). `enum Permission` en `api-gateway/src/common/constants.ts` (p.ej. `UPLOAD_DOCUMENT`, `SIGN_DOCUMENT`, `CHANGE_REQUERIMIENTO_STATE`, `READ_AUDIT_LOG`), inyectados como `permissions[]` en el JWT y verificados por `PermissionsGuard` + decorador `@Permissions(...)` en los controllers del gateway (requerimientos, auditoría, config, auth). Supera al RBAC plano por rol. **Matiz:** la ACL literal "por carpeta/documento" del AC no se implementa; el control es a nivel de operación, no de objeto. El campo `permisosObjectFS` en Contratista sigue sin enforcarse. |
+| HU-18 | ✅ | `AuditoriaInterceptor` global en el gateway (`common/interceptors/auditoria.interceptor.ts`, registrado vía `APP_INTERCEPTOR`) audita automáticamente toda operación mutante (POST/PATCH/PUT/DELETE) sin intervención del usuario. Persiste en la tabla separada e inmutable de `ms-auditoria` (ISO 30300). Fire-and-forget: si la auditoría falla no afecta la petición. |
+| HU-19 | ✅ | `requerimientos.service.ts:updateState` consulta `almacenamiento.findByRequerimiento` y bloquea con 409 al pasar a CERRADO si existe algún documento PDF sin `firmadoEn`, indicando en el mensaje los pendientes. Los formatos no firmables (imágenes/Office) no bloquean. Depende de la persistencia de firma (HU-11). |
+
+### Épica 4 — Reportabilidad e Inteligencia de Negocios
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-20 | ⚪ | **Fuera de alcance** — la HU exige conexión nativa SharePoint Lists → Power BI, imposible con el stack actual (SeaweedFS + PostgreSQL). Reemplazada por HU-21/22/23/24 (dashboards internos con recharts + exportación a Excel). Ver justificación. |
+| HU-21 | ✅ | Distribución de documentos por **categoría** con **drill-down a subtipo** en la nueva página **Reportes** (`ReportesPage.tsx`, recharts). Backend: `ms-almacenamiento.getStats` (pattern `almacenamiento.stats`, GROUP BY portable, categoría/subtipo heredados del requerimiento) → `GET /api/almacenamiento/stats` con filtros de proyecto y rango de fechas (y scoping por contratista). Implementada 2026-06-15. |
+| HU-22 | ❌ | No hay endpoints ni vistas que agrupen requerimientos por usuario o contratista para reporting. |
+| HU-23 | ✅ | KPIs server-side en `ms-requerimientos.getStats` (pattern `requerimientos.stats`, solo `repo.count()`), expuestos en `GET /api/requerimientos/stats` (filtrado por contratista). En el **Dashboard**: tarjetas Abiertos/En Progreso/Cerrados/**Estancados**, **alerta** si hay estancados (>7 días sin cerrar) y **gráfico de tendencia** semanal (creados vs cerrados, recharts) en `RequerimientosKpis.tsx`, refresco cada 30 s. Se eliminó el conteo client-side de 1000 filas. Implementada 2026-06-15. |
+| HU-24 | ❌ | Sin exportación a Excel (no hay `xlsx` ni endpoint `/export`). |
+
+### Épica 5 — Autenticación y Seguridad
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-25 | ✅ | `LoginPage.tsx` + `ms-auth/src/auth/auth.service.ts` JWT. |
+| HU-26 | ✅ | `frontend/src/pages/UsersPage.tsx` + `ms-auth/src/users/`. |
+| HU-27 | ⚪ | **Fuera de alcance** — auto-logout invisible en demo (el timeout de 30 min no se dispara en una presentación). La expiración del JWT existente cubre el riesgo de credencial filtrada. Ver justificación. |
+
+### Épica 6 — Formularios y PDF
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-28 | ✅ | `components/RequerimientoForm.tsx`. |
+| HU-29 | ✅ | `ms-almacenamiento/src/pdf/pdf.service.ts` — pdf-lib + firma incrustada. |
+| HU-30 | ✅ (alcance reducido) | `UploadModal` acepta PNG/JPEG/GIF/WebP desde galería del dispositivo, lo que cubre el escenario móvil en producción. Captura directa de cámara (`capture="environment"`) y límite explícito de 10 imágenes/formulario **fuera de alcance** — la captura directa rompería el input universal de PDFs+imágenes. Ver justificación. |
+
+### Épica 7 — Búsqueda y Navegación
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-31 | ✅ | `GET /api/almacenamiento/search` con filtros contratistaId/proyectoId/areaId/categoriaId/estadoDocumento + query text. Resultados paginados. |
+| HU-32 | ✅ | `components/DocumentTree.tsx` — árbol colapsable con conteo de docs. |
+| HU-33 | ✅ | Panel "Actividad Reciente" en el Dashboard: `GET /api/almacenamiento/recientes` (→ `DocumentosRepository.findRecientes`, últimos 20 docs por fecha, JOIN al requerimiento para el ticket, filtro por contratista si el rol es CONTRATISTA). Componente `RecentActivity` con polling cada 30 s; el click abre el expediente (flujo HU-N6). Implementada 2026-06-15. Ver "Detalle de control de acceso" abajo. |
+
+#### Detalle de control de acceso — HU-33 (Actividad Reciente)
+
+Verificado empíricamente en vivo el 2026-06-15 (comparando la respuesta del endpoint entre roles y los `autorId` devueltos):
+
+- **El panel NO muestra la actividad del propio usuario.** No existe filtro por `autorId`/usuario en `findRecientes`; el único `WHERE` es `d."eliminadoEn" IS NULL` más, opcionalmente, `r."contratistaId" = :cId`. Cada rol ve documentos subidos por otros usuarios (p.ej. el admin ve docs con `autorId=3`).
+- **Tampoco es un control por permisos a nivel de documento (ACL).** El sistema no tiene ACL por objeto (HU-17 es por *acción*, no por documento). No se calcula ningún permiso por documento.
+- **Es un feed GLOBAL con un único scoping por rol:**
+  - `admin` / `supervisor` / `colaborador` / `auditor` → ven **todos** los documentos del sistema (respuesta idéntica entre estos roles; verificado: misma lista de ids).
+  - `contratista` → ve **solo** los documentos de su propia empresa (`r.contratistaId`), por confidencialidad (HU-N3). Único caso filtrado.
+  - Sin token → 401.
+- **Implicación conocida:** un `colaborador`/`auditor` ve en su inicio la actividad de toda la organización, incluidos proyectos/contratistas con los que no tiene relación. Se deja así de forma consciente porque (a) es lo que pide literalmente el AC de HU-33 ("Como **usuario**…"), (b) es coherente con la visibilidad global que ya tienen esos roles en requerimientos/búsqueda, y (c) el sistema **no modela** hoy la pertenencia de un colaborador a proyectos/áreas, por lo que un scoping más fino sería trabajo nuevo. Si se quisiera restringir, las opciones son: acotar al colaborador por sus proyectos (requiere modelar esa relación primero) o limitar el panel a roles de supervisión.
+
+### Épica 8 — Notificaciones
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-34 | ✅ | Infraestructura: tabla `notificaciones` en `ms-auditoria`, módulo TCP `notificaciones` (`crear`/`findByUsuario`/`contarNoLeidas`/`marcarLeida`/`marcarTodasLeidas`), proxy HTTP + **SSE** en el gateway (`/api/notificaciones/stream`, refresco cada 15 s, con `X-Accel-Buffering: no`), y UI `NotificationBell` + `NotificationPanel` con badge de no leídas. El disparo es automático: `NotificacionesDispatchService.onDocumentoSubido` (gateway, invocado desde `AuditoriaInterceptor`) detecta la subida y crea **una notificación por supervisor/gerente/admin** (excluye al autor), con destinatario real —ya no broadcast— (Fix 1, respeta HU-N3). El click navega al expediente del requerimiento (Fix 3). Los 6 bugs del plan están cerrados (Fixes 1-4); solo falta verificar el SSE en vivo en el servidor desplegado. |
+| HU-35 | ✅ | Mismo stack que HU-34. `NotificacionesDispatchService.onCambioEstado` (gateway) detecta el cambio de estado y notifica al **creador y al asignado** del requerimiento (excluyendo al actor), con quién lo hizo y "ORIGEN → DESTINO" (Fix 1 + Fix 2). El click navega al requerimiento (Fix 3). El historial es la lista `findByUsuario`. |
+
+### Épica 9 — Workflow Core (Requerimientos)
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-N1 | ✅ | `requerimientos.service.ts:43-78` — código auto, estado inicial ABIERTO. |
+| HU-N2 | ✅ | `RequerimientoForm.tsx` exige categoría y subtipo. |
+| HU-N3 | ✅ | `requerimientos-gateway.controller.ts:47` inyecta `filterContratistaId` cuando `user.rol === CONTRATISTA`. |
+
+### Épica 10 — Integración Storage
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-N4 | ✅ (adaptada) | `requerimientos.service.ts:65-75` dispara `almacenamiento.expediente.create` en SeaweedFS al crear el requerimiento. `storagePath` contiene el código. |
+| HU-N5 | ✅ (adaptada) | Documentos heredan metadatos del requerimiento padre vía `requerimientoId` y join en `search`. |
+| HU-N6 | ✅ | Botón "Ver carpeta de documentos" en `RequerimientosTable.tsx` + navegación cross-page vía `prefilledRequerimiento` en `AlmacenamientoPage` (implementada 2026-05-17). |
+
+### Épica 11 — Validaciones de Negocio y Cierre
+
+| HU | Estado | Evidencia / Nota |
+|----|--------|------------------|
+| HU-N7 | ✅ | `requerimientos.service.ts:updateState` consulta `almacenamiento.findByRequerimiento` y bloquea con 409 si el expediente está vacío al pasar a EN_PROGRESO. |
+| HU-N8 | ✅ | `pdf.service.generateReporteCierre` (pattern `almacenamiento.pdf.reporteCierre`) consolida en un PDF el log de `ms-auditoria` (`SELECT ... FROM auditoria WHERE requerimientoId`) + resumen del requerimiento y lo archiva como documento OFICIAL en el expediente. Disparo **manual** por supervisor/admin/gerente vía `POST /api/almacenamiento/reporte-cierre/:id`; botón en `RequerimientosTable` para requerimientos CERRADO. |
+
+### Fuera de alcance — Justificación
+
+Decisiones de descarte consciente tomadas durante el Sprint 3. Para cada HU se explica el porqué, qué efectivamente NO se implementará, y qué del espíritu original sí se cubre por otra vía (cuando aplica).
+
+**HU-20 — Reportes en Power BI**
+El criterio de aceptación exige "Conexión nativa SharePoint Lists → Power BI", incompatible con el stack final del proyecto (SeaweedFS + PostgreSQL). El RF4.1 ("informes para la toma de decisiones gerenciales") se cubre por la cadena HU-21 + HU-22 + HU-23 + HU-24 mediante una página de Analítica con gráficos `recharts` y exportación a Excel — todo nativo, sin licencia, sin dependencia externa.
+
+**HU-27 — Auto-logout por inactividad**
+El timeout de 30 min nunca se dispara en una demo de 15-20 min, por lo que es **invisible para la defensa**. El riesgo real (credencial filtrada) ya está mitigado por la expiración del JWT (configurable, default actual ≈ 24 h). Implementar un detector de inactividad client-side + modal de aviso aporta ~2 h de código que no se verá. Se difiere a producción.
+
+**HU-30 — Captura desde cámara + límite de 10 imágenes**
+Lo presentable de la HU **sí se implementa**: `UploadModal` acepta PNG/JPEG/GIF/WebP desde la galería del dispositivo, cumpliendo el escenario móvil real. Los criterios restantes quedan fuera de alcance:
+- **Captura directa con `capture="environment"`**: rompería el input universal de PDFs + imágenes, ya que el atributo `capture` fuerza la cámara y excluye la selección de archivos. Añadir un botón "Tomar foto" separado es 25 líneas de UX que solo aporta en móvil y no en demo.
+- **Límite de 10 imágenes por formulario**: validación trivial pero sin impacto observable. Se omite.
+
+> **Nota (2026-06-14):** HU-34 y HU-35 **dejaron de estar fuera de alcance** — se implementó un sistema de notificaciones in-app (tabla `notificaciones` + SSE + campana con badge). Su descarte original queda anulado. Como consecuencia, HU-14 recupera su AC "notificación al cambiar de estado" (cubierto por HU-35). Ver "Bugs conocidos" para los detalles pendientes.
+
+---
+
+### Bugs conocidos — Notificaciones (HU-34/HU-35)
+
+Detectados en la revisión 2026-06-14. Todos comparten una raíz común: las notificaciones se crean como *broadcast* con `usuarioDestinoId = 0` (`ms-auditoria/src/auditoria/auditoria.service.ts`), en lugar de una fila por destinatario.
+
+1. ✅ **RESUELTO (Fix 1).** *"Marcar todas como leídas" no surtía efecto.* `marcarTodasLeidas` filtraba por `usuarioDestinoId = <id real>` pero las filas eran broadcast (`= 0`). Con filas por-usuario ahora afecta correctamente.
+2. ✅ **RESUELTO (Fix 1).** *El estado "leída" era global.* Al targetizar por destinatario real, cada usuario tiene sus propias filas; la lectura es por-usuario.
+3. ✅ **RESUELTO (Fix 1).** *Fuga de visibilidad (rozaba HU-N3).* HU-34 ahora solo notifica a supervisores/gerentes/admins; HU-35 solo a creador + asignado. Contratistas/auditores ajenos ya no ven notificaciones de otros.
+4. ✅ **RESUELTO (Fix 2).** *HU-35 no mostraba el estado de origen.* `updateState` adjunta un campo transitorio `estadoAnterior`; el mensaje ahora es "ABIERTO → EN_PROGRESO".
+5. ✅ **RESUELTO (Fix 3).** *El click no navegaba.* `NotificationPanel` recibe `onNavigate`; el click marca como leída y abre el requerimiento (vía `requerimientosApi.getById` + flujo HU-N6 `prefilledReq`, con fallback a la vista de Requerimientos).
+6. ✅ **RESUELTO (Fix 4).** *SSE bufferizable por nginx.* El endpoint `@Sse('stream')` fija `X-Accel-Buffering: no` (desde la app, sin tocar infra) y el `frontend/Dockerfile` añade un `location /api/notificaciones/stream` dedicado (`proxy_buffering off`, HTTP/1.1, timeout largo). Mismo puerto 8040. **Falta solo verificación funcional en el servidor real desplegado** (el fix de código está aplicado).
+
+Estado del plan: **Fixes 1-4 aplicados y VERIFICADOS EN VIVO (2026-06-14)** sobre el stack local (Docker, puerto 8040). Evidencia: subida como colaborador → notifica solo a admin+supervisor, no al autor ni al auditor (bugs 1-3); cambio de estado → notifica al creador con "Abierto → En Progreso", no al actor (bug 4); "marcar todas como leídas" devuelve `affected: 3` y limpia el badge sin afectar a otros usuarios (bugs 1-2); el primer evento SSE llega de inmediato a través de nginx (bug 6). Recomendado un último chequeo en el servidor desplegado de la universidad por diferencia de entorno.
+
+---
+
+### Resumen ejecutivo
+
+- **Total HUs:** 43.
+- **Implementadas (✅):** 38 — HU-01..09, HU-10, HU-11, HU-12, HU-13, HU-14, HU-16, HU-17 (adaptada), HU-18, HU-19, HU-21, HU-23, HU-25, HU-26, HU-28, HU-29, HU-30 (alcance reducido), HU-31, HU-32, HU-33, HU-34, HU-35, HU-N1, HU-N2, HU-N3, HU-N4, HU-N5, HU-N6, HU-N7, HU-N8.
+- **Parciales (🟡):** 0.
+- **No implementadas (❌):** 3 — HU-15, HU-22, HU-24.
+- **Fuera de alcance (⚪):** 2 — HU-20, HU-27.
+
+**Cobertura gestionada: 43/43 (100%)** — cada HU tiene un estado definido (implementada, parcial con bugs documentados, o fuera de alcance documentada).
+
+### Plan de cierre
+
+Avance respecto del plan original de 7 fases: las Fases 1, 2 y 4 están **cerradas** (HU-16, HU-18, HU-19, HU-N8). Además se cerraron fuera del plan original HU-17 (adaptada, permisos granulares) y HU-34/HU-35 (notificaciones, 🟡 con bugs conocidos). Queda pendiente:
+
+- **Fase 3**: panel Actividad Reciente → cierra HU-33.
+- **Fase 5**: dashboard analítico con `recharts` → cierra HU-21, HU-22, HU-23.
+- **Fase 6**: exportar a Excel → cierra HU-24.
+- **Corrección de bugs de notificaciones** (ver sección "Bugs conocidos") → eleva HU-34/HU-35 de 🟡 a ✅.
+- **Fase 7**: polish + documentación + demo end-to-end.
+
+Pendientes reales al 2026-06-14: **HU-15, HU-21, HU-22, HU-24, HU-33** (❌) + estabilizar **HU-23, HU-34, HU-35** (🟡).
+
+**HU-15 (bandeja kanban)** sigue pendiente sin plan inmediato; podría cerrarse parcialmente si se añade indicador de antigüedad como mejora dentro de Fase 5.
+
+---
+
 ### Distribución por Prioridad
 
 - 🔴 **Alta:** 21 HUs

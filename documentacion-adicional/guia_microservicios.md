@@ -7,10 +7,11 @@
 ## Arquitectura Actual
 
 ```
-Frontend (React) → HTTP → API Gateway (:3000) → TCP → Microservicios aisaldos
-                                                  ├── ms-auth (:3001)
-                                                  ├── ms-mantenedores (:3002)
-                                                  └── ms-documentos (:3003)
+Frontend (React) → HTTP → API Gateway (:3000) → TCP → Microservicios aislados
+                                                  ├── ms-auth           (:3001)
+                                                  ├── ms-mantenedores   (:3002)
+                                                  ├── ms-documentos     (:3003)
+                                                  └── ms-requerimientos (:3004)
 ```
 
 **Conceptos clave:**
@@ -207,18 +208,47 @@ COPY ms-categorias/package*.json ./
 CMD ["node", "dist/main"]
 ```
 
-### Paso 8: Agregar a Docker Compose
+### Paso 8: Agregar a `docker-compose.yml`
 
-En el `docker-compose.yml` en la raíz, agrega el nuevo contenedor:
+> **Importante:** El CI tiene un job `validate-compose` que revisa automáticamente que todo directorio `backend/<nombre>/` con `Dockerfile` y `package.json` tenga una entrada correspondiente en `docker-compose.yml`. Si olvidas este paso, el pipeline falla con un error como:
+> ```
+> ERROR: Los siguientes microservicios no están en docker-compose.yml:
+>  - ms-nuevo
+> ```
+
+#### Puertos TCP asignados
+
+Cada microservicio necesita un puerto único. Usa el siguiente como referencia:
+
+| Microservicio       | Puerto TCP |
+|---------------------|-----------|
+| ms-auth             | 3001      |
+| ms-mantenedores     | 3002      |
+| ms-documentos       | 3003      |
+| ms-requerimientos   | 3004      |
+| **ms-nuevo**        | **3005**  |
+
+#### Entrada en `docker-compose.yml`
+
+Agrega el bloque del nuevo microservicio antes del bloque `api-gateway`. El formato obligatorio es:
 
 ```yaml
-  ms-categorias:
+  # --- Microservicio Nuevo (TCP :3005) ---
+  ms-nuevo:
+    image: ghcr.io/carlosvsq/gestor-documental-gps/ms-nuevo:latest
     build:
       context: ./backend
-      dockerfile: ms-categorias/Dockerfile
-    container_name: sgd-ms-categorias
-    restart: unless-stopped
-    env_file: .env
+      dockerfile: ms-nuevo/Dockerfile
+      network: host
+    container_name: sgd-ms-nuevo
+    env_file:
+      - .env
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
     depends_on:
       postgres:
         condition: service_healthy
@@ -226,12 +256,20 @@ En el `docker-compose.yml` en la raíz, agrega el nuevo contenedor:
       - sgd-network
 ```
 
-Y asegúrate de decirle al `api-gateway` que debe esperar a este servicio antes de iniciar:
+Luego en el bloque `api-gateway`, agrega las variables de entorno y la dependencia:
+
 ```yaml
   api-gateway:
+    environment:
+      # ... variables existentes ...
+      NUEVO_SERVICE_HOST: ms-nuevo
+      NUEVO_SERVICE_PORT: 3005
     depends_on:
-      - ms-categorias
+      # ... dependencias existentes ...
+      - ms-nuevo
 ```
+
+> **Por qué `image:` y `build:` juntos?** En desarrollo local se usa `docker compose up --build` (usa `build:`). En producción el CD hace `docker-compose pull` y `docker-compose up` (usa `image:` de GHCR). Ambos deben estar presentes.
 
 ---
 
