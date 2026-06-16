@@ -273,4 +273,68 @@ describe('RequerimientosService', () => {
       );
     });
   });
+
+  // ─── HU-22: getVolumenStats ───────────────────────────────
+  describe('getVolumenStats', () => {
+    const mockQb: any = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    };
+
+    beforeEach(() => {
+      (mockRepository as any).createQueryBuilder = jest.fn().mockReturnValue(mockQb);
+      jest.clearAllMocks();
+      mockQb.select.mockReturnValue(mockQb);
+      mockQb.addSelect.mockReturnValue(mockQb);
+      mockQb.where.mockReturnValue(mockQb);
+      mockQb.andWhere.mockReturnValue(mockQb);
+      mockQb.groupBy.mockReturnValue(mockQb);
+      mockQb.getRawMany.mockResolvedValue([
+        { contratistaId: '1', total: '5', abiertos: '2', enProgreso: '2', cerrados: '1' },
+      ]);
+      mockRepository.count.mockResolvedValue(3);
+    });
+
+    it('devuelve byContratista con conteos numéricos y mensual con 6 meses', async () => {
+      const result = await service.getVolumenStats();
+
+      expect(result.byContratista).toHaveLength(1);
+      expect(result.byContratista[0]).toEqual({
+        contratistaId: 1,
+        total: 5,
+        abiertos: 2,
+        enProgreso: 2,
+        cerrados: 1,
+      });
+      expect(result.mensual).toHaveLength(6);
+      expect(result.mensual[0]).toHaveProperty('mes');
+      expect(result.mensual[0]).toHaveProperty('creados');
+    });
+
+    it('aplica filtro contratistaId a la query de agrupación', async () => {
+      await service.getVolumenStats({ contratistaId: 7 });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'r."contratistaId" = :cId',
+        { cId: 7 },
+      );
+    });
+
+    it('aplica filtros de fecha cuando se proporcionan', async () => {
+      await service.getVolumenStats({ desde: '2026-01-01', hasta: '2026-06-01' });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'r."creadoEn" >= :desde',
+        { desde: '2026-01-01' },
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'r."creadoEn" <= :hasta',
+        { hasta: '2026-06-01' },
+      );
+    });
+  });
 });

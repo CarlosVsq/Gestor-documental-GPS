@@ -30,6 +30,7 @@ import {
 } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import * as ExcelJS from 'exceljs';
 import { callService } from '../common/rpc.utils';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
@@ -269,6 +270,73 @@ export class AlmacenamientoGatewayController {
         hasta: query.hasta || undefined,
       }),
     );
+  }
+
+  @Get('stats/export')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.GERENTE, Role.COLABORADOR, Role.AUDITOR, Role.CONTRATISTA)
+  @ApiOperation({ summary: 'HU-24: Exportar distribución por categoría/subtipo a Excel' })
+  @ApiQuery({ name: 'proyectoId', required: false, type: Number })
+  @ApiQuery({ name: 'desde', required: false })
+  @ApiQuery({ name: 'hasta', required: false })
+  async exportStats(
+    @Query() query: any,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const contratistaId =
+      req.user?.rol === Role.CONTRATISTA ? req.user.contratistaId : undefined;
+
+    const statsData = await firstValueFrom(
+      this.client.send(ALMACENAMIENTO_PATTERNS.STATS, {
+        contratistaId,
+        proyectoId: query.proyectoId ? parseInt(query.proyectoId, 10) : undefined,
+        desde: query.desde || undefined,
+        hasta: query.hasta || undefined,
+      }),
+    );
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SGD — Sistema de Gestión Documental';
+    workbook.created = new Date();
+
+    const sheet1 = workbook.addWorksheet('Por Categoría');
+    sheet1.columns = [
+      { header: 'Categoría ID', key: 'categoriaId', width: 14 },
+      { header: 'Cantidad de Documentos', key: 'count', width: 24 },
+    ];
+    sheet1.getRow(1).font = { bold: true };
+    (statsData?.byCategoria || []).forEach((row: any) => {
+      sheet1.addRow({ categoriaId: row.categoriaId, count: row.count });
+    });
+
+    const sheet2 = workbook.addWorksheet('Por Subtipo');
+    sheet2.columns = [
+      { header: 'Subtipo ID', key: 'subtipoId', width: 12 },
+      { header: 'Cantidad de Documentos', key: 'count', width: 24 },
+    ];
+    sheet2.getRow(1).font = { bold: true };
+    (statsData?.bySubtipo || []).forEach((row: any) => {
+      sheet2.addRow({ subtipoId: row.subtipoId, count: row.count });
+    });
+
+    const meta = workbook.addWorksheet('Filtros Aplicados');
+    meta.addRow(['Filtro', 'Valor']);
+    meta.addRow(['Proyecto ID', query.proyectoId || 'Todos']);
+    meta.addRow(['Desde', query.desde || 'Sin filtro']);
+    meta.addRow(['Hasta', query.hasta || 'Sin filtro']);
+    meta.addRow(['Total Documentos', statsData?.total ?? 0]);
+    meta.addRow(['Generado', new Date().toISOString()]);
+
+    const buffer = await workbook.xlsx.writeBuffer() as unknown as Buffer;
+    const filename = `distribucion-documentos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length.toString(),
+    });
+
+    return new StreamableFile(buffer);
   }
 
   // ─── Árbol Jerárquico (HU-32) ─────────────────────────────────────────────

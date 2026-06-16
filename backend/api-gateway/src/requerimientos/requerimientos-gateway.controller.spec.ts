@@ -14,6 +14,7 @@ describe('RequerimientosGatewayController', () => {
       controllers: [RequerimientosGatewayController],
       providers: [
         { provide: SERVICE_NAMES.REQUERIMIENTOS, useValue: mockClient },
+        { provide: SERVICE_NAMES.MANTENEDORES, useValue: {} },
       ],
     }).compile();
 
@@ -44,7 +45,7 @@ describe('RequerimientosGatewayController', () => {
       const req = { user: { id: 1, rol: 'admin' } };
       mockClient.send.mockReturnValue(of({ data: [], total: 0 }));
 
-      await controller.findAll(undefined, undefined, undefined, undefined, undefined, undefined, req);
+      await controller.findAll(undefined, undefined, undefined, undefined, undefined, undefined, undefined, req);
 
       const [, payload] = mockClient.send.mock.calls[0];
       expect(payload.filtros.contratistaId).toBeUndefined();
@@ -55,7 +56,7 @@ describe('RequerimientosGatewayController', () => {
       const req = { user: { id: 5, rol: 'contratista', contratistaId: 3 } };
       mockClient.send.mockReturnValue(of({ data: [], total: 0 }));
 
-      await controller.findAll(undefined, undefined, 'PENDIENTE', undefined, undefined, undefined, req);
+      await controller.findAll(undefined, undefined, 'PENDIENTE', undefined, undefined, undefined, undefined, req);
 
       const [, payload] = mockClient.send.mock.calls[0];
       expect(payload.filtros.contratistaId).toBe(3);
@@ -66,7 +67,7 @@ describe('RequerimientosGatewayController', () => {
       const req = { user: { id: 1, rol: 'supervisor' } };
       mockClient.send.mockReturnValue(of({ data: [], total: 0 }));
 
-      await controller.findAll('2', '20', undefined, undefined, '5', '7', req);
+      await controller.findAll('2', '20', undefined, undefined, '5', '7', undefined, req);
 
       const [, payload] = mockClient.send.mock.calls[0];
       expect(payload.filtros.proyectoId).toBe(5);

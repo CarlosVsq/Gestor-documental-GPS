@@ -66,7 +66,12 @@ export interface RequerimientosStats {
 }
 
 export const requerimientosApi = {
-  async getAll(page = 1, limit = 10, filtros?: any) {
+  async getAll(page = 1, limit = 10, filtros?: {
+    estado?: string;
+    prioridad?: string;
+    contratistaId?: number;
+    proyectoId?: number;
+  }) {
     const cleanedFiltros = Object.fromEntries(
       Object.entries(filtros || {}).filter(([_, v]) => v != null && v !== '')
     );
@@ -125,5 +130,38 @@ export const requerimientosApi = {
     });
     if (!res.ok) throw new Error('Error al obtener estadísticas de requerimientos');
     return res.json();
-  }
+  },
+
+  async getVolumen(filtros?: { desde?: string; hasta?: string }): Promise<{
+    byContratista: Array<{ contratistaId: number; total: number; abiertos: number; enProgreso: number; cerrados: number }>;
+    mensual: Array<{ mes: string; creados: number }>;
+  }> {
+    const params = new URLSearchParams();
+    if (filtros?.desde) params.set('desde', filtros.desde);
+    if (filtros?.hasta) params.set('hasta', filtros.hasta);
+    const url = `${API_BASE}/volumen${params.toString() ? `?${params}` : ''}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Error al obtener volumen de requerimientos');
+    return res.json();
+  },
+
+  async exportVolumen(filtros?: { desde?: string; hasta?: string }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filtros?.desde) params.set('desde', filtros.desde);
+    if (filtros?.hasta) params.set('hasta', filtros.hasta);
+    const url = `${API_BASE}/volumen/export${params.toString() ? `?${params}` : ''}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Error al exportar a Excel');
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? decodeURIComponent(match[1]) : 'volumen-requerimientos.xlsx';
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  },
 };

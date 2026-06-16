@@ -117,6 +117,7 @@ export const REQUERIMIENTOS_PATTERNS = {
   FIND_ONE: 'requerimientos.findOne',
   UPDATE_STATE: 'requerimientos.updateState',
   STATS: 'requerimientos.stats',
+  VOLUMEN: 'requerimientos.volumen',
 } as const;
 
 export const ALMACENAMIENTO_PATTERNS = {

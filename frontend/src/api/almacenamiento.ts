@@ -337,4 +337,25 @@ export const almacenamientoApi = {
     const filename = match ? decodeURIComponent(match[1]) : 'documento_firmado.pdf';
     return { blob: await res.blob(), filename };
   },
+
+  async exportStats(filtros?: { proyectoId?: number; desde?: string; hasta?: string }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filtros?.proyectoId) params.set('proyectoId', String(filtros.proyectoId));
+    if (filtros?.desde) params.set('desde', filtros.desde);
+    if (filtros?.hasta) params.set('hasta', filtros.hasta);
+    const url = `${API_BASE}/stats/export${params.toString() ? `?${params}` : ''}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Error al exportar a Excel');
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? decodeURIComponent(match[1]) : 'distribucion-documentos.xlsx';
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  },
 };

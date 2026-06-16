@@ -166,6 +166,69 @@ export class RequerimientosService {
         return { total, abiertos, enProgreso, cerrados, estancados, tendencia };
     }
 
+  async getVolumenStats(filtros?: {
+    contratistaId?: number;
+    desde?: string;
+    hasta?: string;
+  }): Promise<{
+    byContratista: Array<{ contratistaId: number; total: number; abiertos: number; enProgreso: number; cerrados: number }>;
+    mensual: Array<{ mes: string; creados: number }>;
+  }> {
+    const qb = this.requerimientoRepository
+      .createQueryBuilder('r')
+      .select('r."contratistaId"', 'contratistaId')
+      .addSelect('COUNT(*)', 'total')
+      .addSelect(
+        `SUM(CASE WHEN r.estado = '${EstadoRequerimiento.ABIERTO}' THEN 1 ELSE 0 END)`,
+        'abiertos',
+      )
+      .addSelect(
+        `SUM(CASE WHEN r.estado = '${EstadoRequerimiento.EN_PROGRESO}' THEN 1 ELSE 0 END)`,
+        'enProgreso',
+      )
+      .addSelect(
+        `SUM(CASE WHEN r.estado = '${EstadoRequerimiento.CERRADO}' THEN 1 ELSE 0 END)`,
+        'cerrados',
+      )
+      .where('r."eliminadoEn" IS NULL')
+      .groupBy('r."contratistaId"');
+
+    if (filtros?.contratistaId) {
+      qb.andWhere('r."contratistaId" = :cId', { cId: filtros.contratistaId });
+    }
+    if (filtros?.desde) {
+      qb.andWhere('r."creadoEn" >= :desde', { desde: filtros.desde });
+    }
+    if (filtros?.hasta) {
+      qb.andWhere('r."creadoEn" <= :hasta', { hasta: filtros.hasta });
+    }
+
+    const rows = await qb.getRawMany();
+    const byContratista = rows.map((r) => ({
+      contratistaId: Number(r.contratistaId),
+      total: Number(r.total),
+      abiertos: Number(r.abiertos),
+      enProgreso: Number(r.enProgreso),
+      cerrados: Number(r.cerrados),
+    }));
+
+    const ahora = new Date();
+    const mensual = await Promise.all(
+      Array.from({ length: 6 }, async (_, i) => {
+        const d = new Date(ahora.getFullYear(), ahora.getMonth() - (5 - i), 1);
+        const inicio = new Date(d.getFullYear(), d.getMonth(), 1);
+        const fin = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+        const mes = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        const baseWhere: any = { creadoEn: Between(inicio, fin) };
+        if (filtros?.contratistaId) baseWhere.contratistaId = filtros.contratistaId;
+        const creados = await this.requerimientoRepository.count({ where: baseWhere });
+        return { mes, creados };
+      }),
+    );
+
+    return { byContratista, mensual };
+  }
+
     async findOne(id: number): Promise<Requerimiento> {
         const req = await this.requerimientoRepository.findOne({ where: { id } });
         if (!req) {
