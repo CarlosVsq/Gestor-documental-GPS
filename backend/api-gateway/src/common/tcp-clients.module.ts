@@ -23,19 +23,27 @@ import { SERVICE_NAMES } from './constants';
         },
       },
       {
-        name: SERVICE_NAMES.DOCUMENTOS,
-        transport: Transport.TCP,
-        options: {
-          host: process.env.DOCUMENTOS_SERVICE_HOST || 'ms-documentos',
-          port: parseInt(process.env.DOCUMENTOS_SERVICE_PORT, 10) || 3003,
-        },
-      },
-      {
         name: SERVICE_NAMES.REQUERIMIENTOS,
         transport: Transport.TCP,
         options: {
           host: process.env.REQUERIMIENTOS_SERVICE_HOST || 'ms-requerimientos',
           port: parseInt(process.env.REQUERIMIENTOS_SERVICE_PORT, 10) || 3004,
+        },
+      },
+      {
+        name: SERVICE_NAMES.ALMACENAMIENTO,
+        transport: Transport.TCP,
+        options: {
+          host: process.env.ALMACENAMIENTO_SERVICE_HOST || 'ms-almacenamiento',
+          port: parseInt(process.env.ALMACENAMIENTO_SERVICE_PORT, 10) || 3003,
+        },
+      },
+      {
+        name: SERVICE_NAMES.AUDITORIA,
+        transport: Transport.TCP,
+        options: {
+          host: process.env.AUDITORIA_SERVICE_HOST || 'ms-auditoria',
+          port: parseInt(process.env.AUDITORIA_SERVICE_PORT, 10) || 3005,
         },
       },
     ]),

@@ -13,6 +13,7 @@ export interface AuthUser {
   email: string;
   rol: string;
   contratistaId?: number;
+  permissions: string[];
 }
 
 export interface LoginResponse {

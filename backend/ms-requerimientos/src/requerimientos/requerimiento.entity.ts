@@ -4,6 +4,7 @@ import {
     Column,
     CreateDateColumn,
     UpdateDateColumn,
+    DeleteDateColumn,
 } from 'typeorm';
 
 export enum EstadoRequerimiento {
@@ -100,4 +101,7 @@ export class Requerimiento {
 
     @UpdateDateColumn()
     actualizadoEn: Date;
+
+    @DeleteDateColumn()
+    eliminadoEn: Date;
 }

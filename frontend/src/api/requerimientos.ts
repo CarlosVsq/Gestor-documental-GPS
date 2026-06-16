@@ -50,15 +50,28 @@ export interface CreateRequerimientoDto {
   subtipoId: number;
 }
 
+export interface TendenciaPunto {
+  semana: string;
+  creados: number;
+  cerrados: number;
+}
+
 export interface RequerimientosStats {
   total: number;
   abiertos: number;
   enProgreso: number;
   cerrados: number;
+  estancados: number;
+  tendencia: TendenciaPunto[];
 }
 
 export const requerimientosApi = {
-  async getAll(page = 1, limit = 10, filtros?: any) {
+  async getAll(page = 1, limit = 10, filtros?: {
+    estado?: string;
+    prioridad?: string;
+    contratistaId?: number;
+    proyectoId?: number;
+  }) {
     const cleanedFiltros = Object.fromEntries(
       Object.entries(filtros || {}).filter(([_, v]) => v != null && v !== '')
     );
@@ -109,20 +122,46 @@ export const requerimientosApi = {
     return res.json();
   },
 
-  async getStats() {
-    const res = await fetch(`${API_BASE}?limit=1000`, {
+  // HU-23: KPIs calculados en el backend (antes se traían 1000 filas y se
+  // contaban en el cliente). Devuelve conteos por estado, estancados y tendencia.
+  async getStats(): Promise<RequerimientosStats> {
+    const res = await fetch(`${API_BASE}/stats`, {
       headers: authHeaders(),
     });
-    if (!res.ok) throw new Error('Error al obtener requerimientos para stats');
+    if (!res.ok) throw new Error('Error al obtener estadísticas de requerimientos');
+    return res.json();
+  },
 
-    const responseData = await res.json();
-    const data: Requerimiento[] = responseData.data || [];
+  async getVolumen(filtros?: { desde?: string; hasta?: string }): Promise<{
+    byContratista: Array<{ contratistaId: number; total: number; abiertos: number; enProgreso: number; cerrados: number }>;
+    mensual: Array<{ mes: string; creados: number }>;
+  }> {
+    const params = new URLSearchParams();
+    if (filtros?.desde) params.set('desde', filtros.desde);
+    if (filtros?.hasta) params.set('hasta', filtros.hasta);
+    const url = `${API_BASE}/volumen${params.toString() ? `?${params}` : ''}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Error al obtener volumen de requerimientos');
+    return res.json();
+  },
 
-    return {
-      total: data.length,
-      abiertos: data.filter(r => r.estado === EstadoRequerimiento.ABIERTO).length,
-      enProgreso: data.filter(r => r.estado === EstadoRequerimiento.EN_PROGRESO).length,
-      cerrados: data.filter(r => r.estado === EstadoRequerimiento.CERRADO).length,
-    };
-  }
+  async exportVolumen(filtros?: { desde?: string; hasta?: string }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filtros?.desde) params.set('desde', filtros.desde);
+    if (filtros?.hasta) params.set('hasta', filtros.hasta);
+    const url = `${API_BASE}/volumen/export${params.toString() ? `?${params}` : ''}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Error al exportar a Excel');
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? decodeURIComponent(match[1]) : 'volumen-requerimientos.xlsx';
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  },
 };

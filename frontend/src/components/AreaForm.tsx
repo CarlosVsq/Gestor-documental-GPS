@@ -13,6 +13,7 @@ interface AreaFormProps {
 export default function AreaForm({ onSubmit, initialData, isEditing, onCancel, contratistas }: AreaFormProps) {
     const [formData, setFormData] = useState<CreateAreaDto>({
         nombre: '',
+        codigoArea: '',
         descripcion: '',
         contratistaId: 0,
     });
@@ -29,6 +30,11 @@ export default function AreaForm({ onSubmit, initialData, isEditing, onCancel, c
         if (!formData.nombre || formData.nombre.length < 2) {
             newErrors.nombre = 'El nombre debe tener al menos 2 caracteres';
         }
+        if (!formData.codigoArea || formData.codigoArea.length < 1 || formData.codigoArea.length > 10) {
+            newErrors.codigoArea = 'El código es requerido y debe tener entre 1 y 10 caracteres';
+        } else if (!/^[A-Z0-9]+$/.test(formData.codigoArea)) {
+            newErrors.codigoArea = 'El código debe ser alfanumérico en mayúsculas';
+        }
         if (!formData.contratistaId || formData.contratistaId === 0) {
             newErrors.contratistaId = 'Debe seleccionar un contratista';
         }
@@ -40,7 +46,7 @@ export default function AreaForm({ onSubmit, initialData, isEditing, onCancel, c
         e.preventDefault();
         if (validate()) {
             onSubmit(formData);
-            if (!isEditing) setFormData({ nombre: '', descripcion: '', contratistaId: 0 });
+            if (!isEditing) setFormData({ nombre: '', codigoArea: '', descripcion: '', contratistaId: 0 });
         }
     };
 
@@ -67,6 +73,18 @@ export default function AreaForm({ onSubmit, initialData, isEditing, onCancel, c
                         onChange={(e) => handleChange('nombre', e.target.value)}
                     />
                     {errors.nombre && <span className="field-error">{errors.nombre}</span>}
+                </div>
+
+                <div className={`field-group ${errors.codigoArea ? 'has-error' : ''}`}>
+                    <label htmlFor="area-codigo">Código de Área <span className="required">*</span></label>
+                    <input
+                        id="area-codigo"
+                        type="text"
+                        placeholder="Ej: CIVIL"
+                        value={formData.codigoArea}
+                        onChange={(e) => handleChange('codigoArea', e.target.value.toUpperCase())}
+                    />
+                    {errors.codigoArea && <span className="field-error">{errors.codigoArea}</span>}
                 </div>
 
                 <div className="field-group">

@@ -21,12 +21,25 @@ RUN echo 'server { \
   location / { \
   try_files $uri $uri/ /index.html; \
   } \
+  location /api/notificaciones/stream { \
+  proxy_pass http://api-gateway:3000; \
+  proxy_set_header Host $host; \
+  proxy_set_header X-Real-IP $remote_addr; \
+  proxy_http_version 1.1; \
+  proxy_set_header Connection ""; \
+  proxy_buffering off; \
+  proxy_cache off; \
+  proxy_read_timeout 3600s; \
+  } \
   location /api { \
   proxy_pass http://api-gateway:3000; \
   proxy_set_header Host $host; \
   proxy_set_header X-Real-IP $remote_addr; \
   } \
   }' > /etc/nginx/conf.d/default.conf
+
+# Solucionar MIME type error para archivos .mjs en Nginx
+RUN sed -i '/application\/javascript/s/js;/js mjs;/' /etc/nginx/mime.types || echo "types { application/javascript mjs; }" > /etc/nginx/conf.d/mjs.conf
 
 EXPOSE 80
 

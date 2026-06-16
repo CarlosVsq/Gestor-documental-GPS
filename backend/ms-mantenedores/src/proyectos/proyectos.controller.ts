@@ -31,8 +31,8 @@ export class ProyectosController {
     }
 
     @MessagePattern(PROYECTOS_PATTERNS.TOGGLE)
-    async toggle(@Payload() data: { id: number }) {
-        return this.proyectosService.toggle(data.id);
+    async toggle(@Payload() data: { id: number; actualizadoPor?: string }) {
+        return this.proyectosService.toggle(data.id, data.actualizadoPor);
     }
 
     @MessagePattern(PROYECTOS_PATTERNS.STATS)

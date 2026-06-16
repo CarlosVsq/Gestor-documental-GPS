@@ -10,6 +10,9 @@ coverage/
 .env
 .env.local
 
+# MCP server config (puede contener credenciales)
+.mcp.json
+
 # Database (SQLite dev)
 *.db
 
@@ -27,12 +30,18 @@ npm-debug.log*
 *.swp
 *.swo
 
+# Claude Code
+CLAUDE.md
+
 # Converted text files (temp)
 *.txt
 !README.md
 
 # Python cache
 __pycache__/
+
+# Graphify
+graphify-out/
 
 
 uploads/

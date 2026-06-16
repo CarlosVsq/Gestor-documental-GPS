@@ -9,6 +9,8 @@ import {
 } from 'typeorm';
 import { Area } from '../areas/area.entity';
 
+import { Index } from 'typeorm';
+
 /**
  * Entidad Contratista - HU-01
  * Representa a las empresas contratistas que gestionan documentos en el sistema.
@@ -16,6 +18,7 @@ import { Area } from '../areas/area.entity';
  * Usa soft delete para mantener historial (CA-4).
  */
 @Entity('contratistas')
+@Index('idx_contratistas_permisosObjectFS', ['permisosObjectFS'], { where: '"permisosObjectFS" IS NOT NULL' })
 export class Contratista {
   @PrimaryGeneratedColumn()
   id: number;
@@ -34,6 +37,15 @@ export class Contratista {
 
   @Column({ default: true })
   activo: boolean;
+
+  // --- Integración Object File System ---
+  @Column({
+    type: 'varchar',
+    length: 50,
+    default: 'read_write',
+    nullable: true,
+  })
+  permisosObjectFS: 'read' | 'write' | 'read_write' | 'admin' | null;
 
   // --- Campos de Auditoría (RF3.2) ---
 

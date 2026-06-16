@@ -31,8 +31,8 @@ export class AreasController {
     }
 
     @MessagePattern(AREAS_PATTERNS.TOGGLE)
-    async toggle(@Payload() data: { id: number }) {
-        return this.areasService.toggle(data.id);
+    async toggle(@Payload() data: { id: number; actualizadoPor?: string }) {
+        return this.areasService.toggle(data.id, data.actualizadoPor);
     }
 
     @MessagePattern(AREAS_PATTERNS.STATS)

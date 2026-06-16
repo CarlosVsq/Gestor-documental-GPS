@@ -31,16 +31,21 @@ export class ProyectosService {
             throw new RpcException({ statusCode: 400, message: 'La fecha de fin debe ser posterior a la fecha de inicio' });
         }
 
-        const prefix = area.nombre
+        // Skip generic words like "Area"/"\u00c1rea" so sibling areas don't share the same prefix
+        const meaningfulPart = area.nombre
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z]/g, '')
-            .substring(0, 3)
-            .toUpperCase();
+            .replace(/[^a-zA-Z\s]/g, '')
+            .split(/\s+/)
+            .filter(w => w.toLowerCase() !== 'area' && w.length > 0)
+            .join('');
 
+        const prefix = (meaningfulPart.substring(0, 3) || area.nombre.substring(0, 3)).toUpperCase();
+
+        // Count per prefix (not per area) to avoid collisions across areas with same prefix
         const count = await this.proyectoRepository
             .createQueryBuilder('p')
             .withDeleted()
-            .where('p.areaId = :areaId', { areaId: createDto.areaId })
+            .where('p.codigo LIKE :pattern', { pattern: `${prefix}-%` })
             .getCount();
 
         const sequentialNum = String(count + 1).padStart(3, '0');
@@ -49,8 +54,8 @@ export class ProyectosService {
         const proyecto = this.proyectoRepository.create({
             ...createDto,
             codigo,
-            creadoPor: 'admin',
-            actualizadoPor: 'admin',
+            creadoPor: createDto.creadoPor || 'sistema',
+            actualizadoPor: createDto.creadoPor || 'sistema',
         });
         return this.proyectoRepository.save(proyecto);
     }
@@ -99,15 +104,15 @@ export class ProyectosService {
         if (updateDto.areaId !== undefined) {
             proyecto.area = { id: updateDto.areaId } as any;
         }
-        proyecto.actualizadoPor = 'admin';
+        proyecto.actualizadoPor = updateDto.actualizadoPor || 'sistema';
         await this.proyectoRepository.save(proyecto);
         return this.findOne(id);
     }
 
-    async toggle(id: number): Promise<{ activo: boolean }> {
+    async toggle(id: number, actualizadoPor?: string): Promise<{ activo: boolean }> {
         const proyecto = await this.findOne(id);
         proyecto.activo = !proyecto.activo;
-        proyecto.actualizadoPor = 'admin';
+        proyecto.actualizadoPor = actualizadoPor || 'sistema';
         await this.proyectoRepository.save(proyecto);
         return { activo: proyecto.activo };
     }
